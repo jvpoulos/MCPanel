@@ -108,4 +108,3 @@ en_cv_single_row <- function(M, mask, num_folds = 5, num_alpha = 40L){
   }
   return(en_predict(M, mask , best_lam, best_alpha));
 }
-
