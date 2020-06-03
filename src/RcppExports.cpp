@@ -109,7 +109,7 @@ BEGIN_RCPP
     Rcpp::traits::input_parameter< int >::type niter(niterSEXP);
     Rcpp::traits::input_parameter< double >::type rel_tol(rel_tolSEXP);
     Rcpp::traits::input_parameter< bool >::type is_quiet(is_quietSEXP);
-    rcpp_result_gen = Rcpp::wrap(mcnnm_wc(M, C, X, Z, mask, num_lam_L, num_lam_H, num_lam_B, lambda_L, lambda_H, lambda_B, to_normalize, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol, is_quiet));
+    rcpp_result_gen = Rcpp::wrap(mcnnm_wc(M, C, X, Z, mask, W, num_lam_L, num_lam_H, num_lam_B, lambda_L, lambda_H, lambda_B, to_normalize, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol, is_quiet));
     return rcpp_result_gen;
 END_RCPP
 }
