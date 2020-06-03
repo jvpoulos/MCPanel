@@ -4,13 +4,15 @@
 \alias{mcnnm_wc}
 \title{This function trains all models for given vectors of lambda_L and lambda_H. Each model contains L, H, u, v, lambda_H, and lambda_L.}
 \usage{
-mcnnm_wc(M, X, Z, mask, num_lam_L = 30L, num_lam_H = 30L,
-  lambda_L = as.numeric(c()), lambda_H = as.numeric(c()),
+mcnnm_wc(M, C, X, Z, mask, W, num_lam_L = 30L, num_lam_H = 30L, num_lam_B = 30L,
+  lambda_L = as.numeric(c()), lambda_H = as.numeric(c()), lambda_B = as.numeric(c()),
   to_normalize = 1L, to_estimate_u = 1L, to_estimate_v = 1L,
   to_add_ID = 1L, niter = 100L, rel_tol = 1e-05, is_quiet = 1L)
 }
 \arguments{
 \item{M}{Matrix of observed entries. The input should be N (number of units) by T (number of time periods).}
+
+\item{C}{Matrix containing time -and unit-related covariates. The dimensions of C should match those of M. If time- and unit-related covariates do not exist C = matrix(0L,0,0,0,0) should be used as input.}
 
 \item{X}{Matrix containing unit-related covariates. The number of rows of X should match with the number of units (number of rows of M). If unit-related covariates do not exist X = matrix(0L,0,0) should be used as input.}
 
@@ -18,13 +20,19 @@ mcnnm_wc(M, X, Z, mask, num_lam_L = 30L, num_lam_H = 30L,
 
 \item{mask}{Binary mask with the same shape as M containing observed entries.}
 
+\item{W}{Matrix of weights. The input should be N (number of units) by T (number of time periods).}
+
 \item{num_lam_L}{Optional parameter on the number of lambda_Ls to consider for learning. The default number is 30 and lambda_L values are from minimum number which makes L zero to 1e-3 times this minimum number.}
 
 \item{num_lam_H}{Optional parameter on the number of lambda_Hs to consider for learning. The default number is 30 and lambda_H values are from minimum number which makes H zero to 1e-3 times this minimum number.}
 
+\item{num_lam_B}{Optional parameter on the number of lambda_Bs to consider for learning. The default number is 30 and lambda_H values are from minimum number which makes H zero to 1e-3 times this minimum number.}
+
 \item{lambda_L}{Optional numeric vector containing all lambda_L values that user want to train model on sorted decreasingly (important for warm-start). By default this is empty (user need not to provide this) and num_lam_L and the rule explained above is used. However, once this vector is passed by user manually, num_lam_L argument will not be used.}
 
 \item{lambda_H}{Optional numeric vector containing all lambda_H values that user want to train model on sorted decreasingly (important for warm-start). By default this is empty (user need not to provide this) and num_lam_H and the rule explained above is used. However, once this vector is passed by user manually, num_lam_H argument will not be used.}
+
+\item{lambda_B}{Optional numeric vector containing all lambda_H values that user want to train model on sorted decreasingly (important for warm-start). By default this is empty (user need not to provide this) and num_lam_B and the rule explained above is used. However, once this vector is passed by user manually, num_lam_B argument will not be used.}
 
 \item{to_normalize}{Optional boolean parameter indicating whether to normalize covariates or not (columns of X and Z). The default value is 1. If this value is set to 0, the result would be sensitive to scales in covariates.}
 
@@ -39,13 +47,13 @@ mcnnm_wc(M, X, Z, mask, num_lam_L = 30L, num_lam_H = 30L,
 \item{is_quiet}{Optional boolean input which indicates whether to print the status of learning and convergence results for Cyclic Coordinate Descent algorithm or not. The default value is 1 (no output is printed).}
 }
 \value{
-The list of all models trained with the given vector of lambda_Ls and lambda_Hs.
+The list of all models trained with the given vector of lambda_Ls and lambda_Hs and lambda_Bs.
 }
 \description{
-This function trains all models for given vectors of lambda_L and lambda_H. Each model contains L, H, u, v, lambda_H, and lambda_L.
+This function trains all models for given vectors of lambda_L and lambda_H and lambda_B. Each model contains L, B, H, u, v, lambda_H, and lambda_L and lambda_B.
 }
 \examples{
-mcnnm_wc(M = replicate(5,rnorm(5)), X = replicate(3, rnorm(5)), Z = matrix(0L, 0, 0),  mask = matrix(rbinom(5*5,1,0.8),5,5), lambda_L=c(5,1,0.5,0.1), lambda_H=c(5,1,0.5,0.1))
+mcnnm_wc(M = replicate(5,rnorm(5)), C = replicate(5,rnorm(5)), X = replicate(3, rnorm(5)), Z = matrix(0L, 0, 0),  mask = matrix(rbinom(5*5,1,0.8),5,5), W = matrix(runif(5*5,0,1),5,5), lambda_L=c(5,1,0.5,0.1), lambda_H=c(5,1,0.5,0.1), lambda_B=c(5,1,0.5,0.1))
 }
 \seealso{
 \code{\link{mcnnm}}

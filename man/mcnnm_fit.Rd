@@ -5,13 +5,15 @@
 \title{This function trains a model for a specified value of lambda_L. The result contains L, u, v, and lambda_L. 
 The only difference with mcnnm is that this function trains only for a specified value of lambda_L.}
 \usage{
-mcnnm_fit(M, mask, lambda_L, to_estimate_u = 1L, to_estimate_v = 1L,
+mcnnm_fit(M, mask, W, lambda_L, to_estimate_u = 1L, to_estimate_v = 1L,
   niter = 1000L, rel_tol = 1e-05, is_quiet = 1L)
 }
 \arguments{
 \item{M}{Matrix of observed entries. The input should be N (number of units) by T (number of time periods).}
 
 \item{mask}{Binary mask with the same shape as M containing observed entries.}
+
+\item{W}{Matrix of weights. The input should be N (number of units) by T (number of time periods).}
 
 \item{lambda_L}{Required parameter for fitting the model as this function computes the result for a specified value of lambda_L.}
 
@@ -31,7 +33,7 @@ This function trains a model for a specified value of lambda_L. The result conta
 The only difference with mcnnm is that this function trains only for a specified value of lambda_L.
 }
 \examples{
-mcnnm_fit(M = replicate(5,rnorm(5)), mask = matrix(rbinom(5*5,1,0.8),5,5), lambda_L = 0.5)
+mcnnm_fit(M = replicate(5,rnorm(5)), mask = matrix(rbinom(5*5,1,0.8),5,5), W = matrix(runif(5*5,0,1),5,5), lambda_L = 0.5)
 }
 \seealso{
 \code{\link{mcnnm}}

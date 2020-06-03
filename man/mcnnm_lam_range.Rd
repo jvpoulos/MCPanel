@@ -5,13 +5,15 @@
 \title{This function computes the minimum value of lambda_L which causes L to be zero. 
 User can get the output of this function and fit the low-rank model with her desired value of lambda_L.}
 \usage{
-mcnnm_lam_range(M, mask, to_estimate_u = 1L, to_estimate_v = 1L,
+mcnnm_lam_range(M, mask, W, to_estimate_u = 1L, to_estimate_v = 1L,
   niter = 1000L, rel_tol = 1e-05)
 }
 \arguments{
 \item{M}{Matrix of observed entries. The input should be N (number of units) by T (number of time periods).}
 
 \item{mask}{Binary mask with the same shape as M containing observed entries.}
+
+\item{W}{Matrix of weights. The input should be N (number of units) by T (number of time periods).}
 
 \item{to_estimate_u}{Optional boolean input for wheter estimating fixed unit effects (row means of M) or not. Default is 1.}
 
@@ -29,5 +31,5 @@ This function computes the minimum value of lambda_L which causes L to be zero.
 User can get the output of this function and fit the low-rank model with her desired value of lambda_L.
 }
 \examples{
-mcnnm_lam_range(M = replicate(5,rnorm(5)), mask = matrix(rbinom(5*5,1,0.8),5,5))
+mcnnm_lam_range(M = replicate(5,rnorm(5)), mask = matrix(rbinom(5*5,1,0.8),5,5), W = matrix(runif(5*5,0,1),5,5))
 }

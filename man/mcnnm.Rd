@@ -4,7 +4,7 @@
 \alias{mcnnm}
 \title{This function trains all models for a given vector of lambda_L. Each model contains L, u, v, and lambda_L.}
 \usage{
-mcnnm(M, mask, num_lam_L = 100L, lambda_L = as.numeric(c()),
+mcnnm(M, mask, W, num_lam_L = 100L, lambda_L = as.numeric(c()),
   to_estimate_u = 1L, to_estimate_v = 1L, niter = 1000L,
   rel_tol = 1e-05, is_quiet = 1L)
 }
@@ -12,6 +12,8 @@ mcnnm(M, mask, num_lam_L = 100L, lambda_L = as.numeric(c()),
 \item{M}{Matrix of observed entries. The input should be N (number of units) by T (number of time periods).}
 
 \item{mask}{Binary mask with the same shape as M containing observed entries.}
+
+\item{W}{Matrix of weights. The input should be N (number of units) by T (number of time periods).}
 
 \item{num_lam_L}{Optional parameter on the number of lambda_Ls to consider for learning. The default number is 100 and lambda_L values are from minimum number which makes L zero to 1e-3 times this minimum number.}
 
@@ -32,5 +34,5 @@ The list of all models trained with the given vector of lambda_Ls.
 This function trains all models for a given vector of lambda_L. Each model contains L, u, v, and lambda_L.
 }
 \examples{
-mcnnm(M = replicate(5,rnorm(5)), mask = matrix(rbinom(5*5,1,0.8),5,5), lambda_L = c(10,5,1,0.5,0.1,0.05))
+mcnnm(M = replicate(5,rnorm(5)), mask = matrix(rbinom(5*5,1,0.8),5,5), W = matrix(runif(5*5,0,1),5,5), lambda_L = c(10,5,1,0.5,0.1,0.05))
 }
