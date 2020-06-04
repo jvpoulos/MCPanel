@@ -6,7 +6,7 @@ The __MCPanel__ package provides functions to fit a low-rank model to a partiall
 Prerequsites
 ------
 
-* **R** 3.6 (tested on 3.6.1)
+* **R** >= 3.5.0 (tested on 3.6.1)
  * Rcpp, evalCpp, glmnet, latex2exp, ggplot2
 
 To install this package in R, run the following commands:
