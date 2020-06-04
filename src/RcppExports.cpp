@@ -190,14 +190,14 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
-    {"_MCPanel_mcnnm_lam_range", (DL_FUNC) &_MCPanel_mcnnm_lam_range, 6},
-    {"_MCPanel_mcnnm_wc_lam_range", (DL_FUNC) &_MCPanel_mcnnm_wc_lam_range, 10},
-    {"_MCPanel_mcnnm", (DL_FUNC) &_MCPanel_mcnnm, 9},
-    {"_MCPanel_mcnnm_fit", (DL_FUNC) &_MCPanel_mcnnm_fit, 8},
-    {"_MCPanel_mcnnm_wc", (DL_FUNC) &_MCPanel_mcnnm_wc, 15},
-    {"_MCPanel_mcnnm_wc_fit", (DL_FUNC) &_MCPanel_mcnnm_wc_fit, 13},
-    {"_MCPanel_mcnnm_cv", (DL_FUNC) &_MCPanel_mcnnm_cv, 10},
-    {"_MCPanel_mcnnm_wc_cv", (DL_FUNC) &_MCPanel_mcnnm_wc_cv, 15},
+    {"_MCPanel_mcnnm_lam_range", (DL_FUNC) &_MCPanel_mcnnm_lam_range, 7},
+    {"_MCPanel_mcnnm_wc_lam_range", (DL_FUNC) &_MCPanel_mcnnm_wc_lam_range, 12},
+    {"_MCPanel_mcnnm", (DL_FUNC) &_MCPanel_mcnnm, 10},
+    {"_MCPanel_mcnnm_fit", (DL_FUNC) &_MCPanel_mcnnm_fit, 9},
+    {"_MCPanel_mcnnm_wc", (DL_FUNC) &_MCPanel_mcnnm_wc, 19},
+    {"_MCPanel_mcnnm_wc_fit", (DL_FUNC) &_MCPanel_mcnnm_wc_fit, 16},
+    {"_MCPanel_mcnnm_cv", (DL_FUNC) &_MCPanel_mcnnm_cv, 11},
+    {"_MCPanel_mcnnm_wc_cv", (DL_FUNC) &_MCPanel_mcnnm_wc_cv, 18},
     {NULL, NULL, 0}
 };
 
