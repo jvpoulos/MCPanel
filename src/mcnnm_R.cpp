@@ -1093,8 +1093,8 @@ List NNM_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, N
   for (int k = 0; k< num_lam_B; k++){
     for (int j = 0; j< num_lam_H; j++){
       for (int i = 0; i < num_lam_L; i++){
-        int current_ind = j*num_lam_L+i;
-        List current_config = tmp_res(j*num_lam_L+i);
+        int current_ind = k*j*num_lam_L+i;
+        List current_config = tmp_res(k*j*num_lam_L+i);
         List this_config = List::create(Named("H") = current_config["H"],
                                         Named("B") = current_config["B"],
                                         Named("L") = current_config["L"],

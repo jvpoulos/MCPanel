@@ -55,7 +55,7 @@ It creates some folds, divides the observed entry to training and validation on 
 Finally, it chooses the model which gives the smallest average RMSE.
 }
 \examples{
-mcnnm_wc_cv(M = replicate(5,rnorm(5)), C = replicate(5,rnorm(5)), X = replicate(3, rnorm(5)), Z = matrix(0L, 0, 0),  mask = matrix(rbinom(5*5,1,0.8),5,5), W = matrix(runif(5*5,0,1),5,5), lambda_L=0.1, lambda_H=0.1, lambda_B=0.1)
+mcnnm_wc_cv(M = replicate(5,rnorm(5)), C = replicate(5,rnorm(5)), X = replicate(3, rnorm(5)), Z = matrix(0L, 0, 0),  mask = matrix(rbinom(5*5,1,0.8),5,5), W = matrix(runif(5*5,0,1),5,5))
 }
 \seealso{
 \code{\link{mcnnm_cv}}
