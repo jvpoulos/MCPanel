@@ -22,7 +22,7 @@ mcnnm_wc_cv(M, C, X, Z, mask, W, to_normalize = 1L, to_estimate_u = 1L,
 
 \item{mask}{Binary mask with the same shape as M containing observed entries.}
 
-\item{W}{Matrix of weights. The input should be N (number of units) by T (number of time periods).}
+\item{W}{Matrix with the same shape as M containing weights for the training loss. W should be in inputted in the form of W/(1-W) and contain values between 0 and 1.}
 
 \item{to_normalize}{Optional boolean parameter indicating whether to normalize covariates or not (columns of X and Z). The default value is 1. If this value is set to 0, the result would be sensitive to scales in covariates.}
 
@@ -48,13 +48,14 @@ mcnnm_wc_cv(M, C, X, Z, mask, W, to_normalize = 1L, to_estimate_u = 1L,
 }
 \value{
 The best model fitted using lambda_L and lambda_H and lambda_B chosen via cross-validation using all observed entries (not only training set). The output also includes the matrix of average root mean squared error for different values of lambda_L and lambda_H and lambda_B.
-\examples{
-mcnnm_wc_cv(M = replicate(5,rnorm(5)), X = replicate(3, rnorm(5)), Z = matrix(0L, 0, 0),  mask = matrix(rbinom(5*5,1,0.8),5,5))
 }
 \description{
 This function computes the best model fitted to the data. Best values of lambda_L and lambda_H and lambda_B are chosen via cross-validation using all observed entries.
 It creates some folds, divides the observed entry to training and validation on each fold, computes the best model on training sets and finds root mean squared error on validation sets.
 Finally, it chooses the model which gives the smallest average RMSE.
+}
+\examples{
+mcnnm_wc_cv(M = replicate(5,rnorm(5)), C = replicate(5,rnorm(5)), X = replicate(3, rnorm(5)), Z = matrix(0L, 0, 0),  mask = matrix(rbinom(5*5,1,0.8),5,5), W = matrix(runif(5*5,0,1),5,5), lambda_L=0.1, lambda_H=0.1, lambda_B=0.1)
 }
 \seealso{
 \code{\link{mcnnm_cv}}

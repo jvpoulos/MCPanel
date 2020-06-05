@@ -126,7 +126,7 @@ mcnnm_wc_fit <- function(M, C, X, Z, mask, W, lambda_L, lambda_H, lambda_B, to_n
 #' @param cv_ratio Optional parameter indicating what percentage of observed entries to be used for training. 1-cv_ratio will be dedicated to validation set. For each fold these two sets are chosen randomly. Default value is 80/20 for training/validation.
 #' @inheritParams mcnnm_wc_lam_range
 #' @return The best model fitted using lambda_L and lambda_H and lambda_B chosen via cross-validation using all observed entries (not only training set). The output also includes the matrix of average root mean squared error for different values of lambda_L and lambda_H and lambda_B.
-#' examples
+#' @examples
 #' mcnnm_wc_cv(M = replicate(5,rnorm(5)), C = replicate(5,rnorm(5)), X = replicate(3, rnorm(5)), Z = matrix(0L, 0, 0),  mask = matrix(rbinom(5*5,1,0.8),5,5), W = matrix(runif(5*5,0,1),5,5))
 #' @seealso \code{\link{mcnnm_cv}}
 mcnnm_wc_cv <- function(M, C, X, Z, mask, W, to_normalize = 1L, to_estimate_u = 1L, to_estimate_v = 1L, to_add_ID = 1L, num_lam_L = 30L, num_lam_H = 30L, num_lam_B = 30L, niter = 100L, rel_tol = 1e-5, cv_ratio = 0.8, num_folds = 1L, is_quiet = 1L) {
