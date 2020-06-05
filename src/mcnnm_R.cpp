@@ -120,7 +120,7 @@ double Compute_objval(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Nume
   MatrixXd err_mat_ = est_mat_ - M_;
   MatrixXd err_mask_ = (err_mat_.array()) * mask_.array();
 
-  w_mat_ones = Eigen::MatrixXd::Ones(W_.rows(), W_.cols())
+  MatrixXd w_mat_ones = Eigen::MatrixXd::Ones(W_.rows(), W_.cols())
 
   MatrixXd w_mat_ = (W_/(w_mat_ones - W_));
   MatrixXd w_mask_ = (w_mat_.array()) * mask_.array();
@@ -152,7 +152,7 @@ double Compute_objval_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, Numer
   MatrixXd err_mat_ = est_mat_ - M_;
   MatrixXd err_mask_ = (err_mat_.array()) * mask_.array();
 
-  w_mat_ones = Eigen::MatrixXd::Ones(W_.rows(), W_.cols())
+  MatrixXd w_mat_ones = Eigen::MatrixXd::Ones(W_.rows(), W_.cols())
 
   MatrixXd w_mat_ = (W_/(w_mat_ones - W_));
   MatrixXd w_mask_ = (w_mat_.array()) * mask_.array();
