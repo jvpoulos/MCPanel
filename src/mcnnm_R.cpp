@@ -1,4 +1,5 @@
 #include <iostream>
+#include <algorithm>
 #include <cmath>
 #include <Rcpp.h>
 #include "Eigen/Dense"
@@ -120,10 +121,15 @@ double Compute_objval(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Nume
   MatrixXd err_mat_ = est_mat_ - M_;
   MatrixXd err_mask_ = (err_mat_.array()) * mask_.array();
 
-  MatrixXd w_mat_ = (W_/(double(1)-W_));
+  const int value = 1;
+  
+  int w_mat_ones[M_.rows()][M_.cols()];
+  std::fill(*w_mat_ones, *w_mat_ones + M_rows()*M.cols(), 1);
+
+  MatrixXd w_mat_ = (W_/(w_mat_ones - W_));
   MatrixXd w_mask_ = (w_mat_.array()) * mask_.array();
 
-  double obj_val = (double(1)/train_size) * w_mask.sum() * (err_mask_.cwiseProduct(err_mask_)).sum() + lambda_L * sum_sing_vals;
+  double obj_val = (double(1)/train_size) * w_mask_.sum() * (err_mask_.cwiseProduct(err_mask_)).sum() + lambda_L * sum_sing_vals;
   return obj_val;
 }
 
@@ -149,11 +155,15 @@ double Compute_objval_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, Numer
 
   MatrixXd err_mat_ = est_mat_ - M_;
   MatrixXd err_mask_ = (err_mat_.array()) * mask_.array();
+  const int value = 1;
+  
+  int w_mat_ones[M_.rows()][M_.cols()];
+  std::fill(*w_mat_ones, *w_mat_ones + M_rows()*M.cols(), 1);
 
-  MatrixXd w_mat_ = (W_/(double(1)-W_));
+  MatrixXd w_mat_ = (W_/(w_mat_ones - W_));
   MatrixXd w_mask_ = (w_mat_.array()) * mask_.array();
 
-  double obj_val = (double(1)/train_size) * w_mask.sum() * (err_mask_.cwiseProduct(err_mask_)).sum() + lambda_L * sum_sing_vals + lambda_H*norm_H + lambda_B*norm_B;
+  double obj_val = (double(1)/train_size) * w_mask_.sum() * (err_mask_.cwiseProduct(err_mask_)).sum() + lambda_L * sum_sing_vals + lambda_H*norm_H + lambda_B*norm_B;
   return obj_val;
 }
 
@@ -900,7 +910,7 @@ List NNM_fit_H(NumericMatrix M, NumericMatrix C, NumericMatrix B_init, NumericMa
     }
     // Update B
     NumericMatrix upd_B = update_B_H(M, C, B, Xp, Zp, H, mask, L, u, v, to_add_ID, lambda_B);
-    B = B_upd;
+    B = upd_B;
     // Update H
     List upd_H = update_H_H(M, Xp, Zp, H, T, in_prod, in_prod_T, mask, L, u, v, to_add_ID, lambda_H);
     NumericMatrix H_upd = upd_H["H"];
@@ -1585,10 +1595,6 @@ int mcnnm_wc_lam_range_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, 
     std::cerr << "Error: Number of rows of C should match with the number of rows of M" << std::endl;
     return 0;
   }
-  if(W_.rows() > 0 && W_size_check(M,W) == 0){
-    std::cerr << "Error: Number of rows of W should match with the number of rows of M" << std::endl;
-    return 0;
-  }
   if(X_.rows() > 0 && X_size_check(M,X) == 0){
     std::cerr << "Error: Number of rows of X should match with the number of rows of M" << std::endl;
     return 0;
@@ -1814,7 +1820,7 @@ int mcnnm_wc_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMat
 // [[Rcpp::export]]
 List mcnnm_wc(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, int num_lam_L = 30, int num_lam_H = 30, int num_lam_B = 30, NumericVector lambda_L = NumericVector::create(), NumericVector lambda_H = NumericVector::create(), NumericVector lambda_B = NumericVector::create(), bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, bool to_add_ID = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
 
-  int input_checks = mcnnm_wc_check(M, X, Z, mask, W, num_lam_L, num_lam_H, num_lam_B, lambda_L, lambda_H, lambda_B, to_normalize, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol,is_quiet);
+  int input_checks = mcnnm_wc_check(M, C, X, Z, mask, W, num_lam_L, num_lam_H, num_lam_B, lambda_L, lambda_H, lambda_B, to_normalize, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol, is_quiet);
   if (input_checks == 0){
     throw std::invalid_argument("Invalid inputs ! Please modify");
   }
