@@ -6,7 +6,7 @@
 #' 
 #' @param M Matrix of observed entries. The input should be N (number of units) by T (number of time periods).
 #' @param mask Binary mask with the same shape as M containing observed entries.
-#' @param W Matrix with the same shape as M containing weights (between zero and 1) for the training loss.
+#' @param W Matrix with the same shape as M containing weights for the training loss. W should be in inputted in the form of W/(1-W) and contain values between 0 and 1.
 #' @param to_estimate_u Optional boolean input for wheter estimating fixed unit effects (row means of M) or not. Default is 1.
 #' @param to_estimate_u Optional boolean input for wheter estimating fixed time effects (column means of M) or not. Default is 1.
 #' @param niter Optional parameter on the number of iterations taken in the algorithm for each fixed value of lambda_L. The default value is 1000 and it is sufficiently large as the algorithm is using warm-start strategy.
