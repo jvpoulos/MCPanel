@@ -69,7 +69,7 @@ NumericMatrix ComputeMatrix(NumericMatrix L, NumericVector u, NumericVector v){
 
 NumericMatrix ComputeMatrix_H(NumericMatrix L, NumericMatrix C, NumericMatrix B, NumericMatrix X, NumericMatrix Z, NumericMatrix H, NumericVector u, NumericVector v, bool to_add_ID){
 
-  // This function computes L + C*B + X*H*Z^T + u1^T + 1v^T, which is our decomposition.
+  // This function computes L + B*C^T + X*H*Z^T + u1^T + 1v^T, which is our decomposition.
 
   using Eigen::Map;
   const Map<MatrixXd> L_(as<Map<MatrixXd> >(L));
@@ -92,10 +92,10 @@ NumericMatrix ComputeMatrix_H(NumericMatrix L, NumericMatrix C, NumericMatrix B,
 
   MatrixXd res_;
   if(to_add_ID == 0){
-    res_ = L_ + C_.transpose() * B_ + X_ * H_ * Z_.transpose() + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
+    res_ = L_ + C_ * B_ + X_ * H_ * Z_.transpose() + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
   }
   else{
-    res_ = L_ + C_.transpose() * B_ + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
+    res_ = L_ + C_ * B_ + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
     res_ += X_.topLeftCorner(num_rows, H_rows_bef) * H_.topLeftCorner(H_rows_bef, H_cols_bef) * Z_.topLeftCorner(num_cols,H_cols_bef).transpose();
     res_ += X_.topLeftCorner(num_rows, H_rows_bef) * H_.topRightCorner(H_rows_bef, num_cols);
     res_ += H_.bottomLeftCorner(num_rows, H_cols_bef) * Z_.topLeftCorner(num_cols, H_cols_bef).transpose();
@@ -181,6 +181,7 @@ double Compute_RMSE_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, Numeric
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
   const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
   const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
+  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
 
   int num_rows = M_.rows();
   int num_cols = M_.cols();
@@ -328,7 +329,7 @@ NumericVector update_u_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, Nume
   const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
   const Map<MatrixXd> H_(as<Map<MatrixXd> >(H));
   const Map<VectorXd> v_(as<Map<VectorXd> >(v));
-  MatrixXd T_ = C_.transpose() * B_ + X_ * H_ * Z_.transpose();
+  MatrixXd T_ = C_ * B_ + X_ * H_ * Z_.transpose();
 
   VectorXd res(M_.rows(),1);
   for (int i = 0; i<M_.rows(); i++){
@@ -386,7 +387,7 @@ NumericVector update_v_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, Nume
   const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
   const Map<MatrixXd> H_(as<Map<MatrixXd> >(H));
   const Map<VectorXd> u_(as<Map<VectorXd> >(u));
-  MatrixXd T_ = C_.transpose() * B_ + X_ * H_ * Z_.transpose();
+  MatrixXd T_ = C_ * B_ + X_ * H_ * Z_.transpose();
 
   VectorXd res(M_.cols(),1);
   for (int i = 0; i<M_.cols(); i++)
@@ -751,8 +752,8 @@ List create_folds_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMa
 
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
-  const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
+  const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
   int num_rows = M_.rows();
   int num_cols = M_.cols();
   List out(num_folds);
@@ -843,13 +844,14 @@ List NNM_fit(NumericMatrix M, NumericMatrix mask, NumericMatrix L_init, NumericM
                       Named("v") = v);
 }
 
-List NNM_fit_H(NumericMatrix M, NumericMatrix C, NumericMatrix B_init, NumericMatrix X, NumericMatrix Z, NumericMatrix H_init, NumericMatrix T, NumericVector in_prod, NumericVector in_prod_T, NumericMatrix mask, NumericMatrix L_init, NumericMatrix W, NumericVector u_init, NumericVector v_init, bool to_estimate_u, bool to_estimate_v, bool to_add_ID ,double lambda_L, double lambda_H, double lambda_B, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
+List NNM_fit_H(NumericMatrix M, NumericMatrix C, NumericMatrix B_init, NumericMatrix X, NumericMatrix Z, NumericMatrix H_init, NumericMatrix T, NumericVector in_prod, NumericVector in_prod_T, NumericMatrix mask, NumericMatrix L_init, NumericMatrix W, NumericVector u_init, NumericVector v_init, bool to_estimate_u, bool to_estimate_v, bool to_add_ID , double lambda_L, double lambda_H, double lambda_B, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
 
   // This function performs cyclic coordinate descent updates.
   // For given matrices M, mask, and initial starting decomposition given by L_init, u_init, and v_init,
   // matrices L, B, H, u, and v are updated till convergence via coordinate descent.
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
+  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
   const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
   const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
   int num_rows = M_.rows();
@@ -1093,8 +1095,8 @@ List NNM_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, N
   for (int k = 0; k< num_lam_B; k++){
     for (int j = 0; j< num_lam_H; j++){
       for (int i = 0; i < num_lam_L; i++){
-        int current_ind = k*j*num_lam_L+i;
-        List current_config = tmp_res(k*j*num_lam_L+i);
+        int current_ind = k*j*i;
+        List current_config = tmp_res(k*j*i);
         List this_config = List::create(Named("H") = current_config["H"],
                                         Named("B") = current_config["B"],
                                         Named("L") = current_config["L"],
@@ -1137,7 +1139,7 @@ List NNM_with_uv_init_H_opt_path(NumericMatrix M, NumericMatrix C, NumericMatrix
   NumericMatrix H_init = wrap(MatrixXd::Zero(H_rows,H_cols));
   NumericVector in_prod = wrap(VectorXd::Zero(num_rows*num_cols));
   for (int k = 0; k<num_lam_B; k++){
-    List previous_pt = NNM_fit_H(M, C, B_init, X, Z, H_init, T, in_prod, in_prod_T, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, to_add_ID, lambda_L(0), lambda_H(num_lam_H-1), lambda_B(k), niter, rel_tol, is_quiet);
+    List previous_pt = NNM_fit_H(M, C, B_init, X, Z, H_init, T, in_prod, in_prod_T, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, to_add_ID, lambda_L(0), lambda_H(0), lambda_B(k), niter, rel_tol, is_quiet);
     NumericMatrix L_upd = previous_pt["L"];
     NumericMatrix H_upd = previous_pt["H"];
     NumericMatrix B_upd = previous_pt["B"];
@@ -1337,7 +1339,6 @@ List NNM_CV_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z
     if(lam_B_max > max_lam_B){
       max_lam_B = lam_B_max;
     }
-
   }
   NumericVector lambda_Ls_without_zero = logsp(log10(max_lam_L), log10(max_lam_L)-3, num_lam_L-1);
   NumericVector lambda_Hs_without_zero = logsp(log10(max_lam_H), log10(max_lam_H)-3, num_lam_H-1);
@@ -1376,7 +1377,7 @@ List NNM_CV_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z
     for (int i = 0; i < num_lam_L; i++){
       for (int j = 0; j < num_lam_H; j++){
         for (int c = 0; c < num_lam_B; c++){
-          List this_config = train_configs[c*j*num_lam_L+i];
+          List this_config = train_configs[c*j*i];
           NumericMatrix L_use = this_config["L"];
           NumericVector u_use = this_config["u"];
           NumericVector v_use = this_config["v"];
@@ -1874,7 +1875,7 @@ List mcnnm_wc(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z
   if(to_normalize == 1 && C_.cols()>0){
     for(int i=0; i<res.size(); i++){
       List tmp = res(i);
-      NumericMatrix B_renorm = normalize_back_cols_C(tmp["H"], C_col_norms);
+      NumericMatrix B_renorm = normalize_back_cols_C(tmp["B"], C_col_norms);
       tmp["B"] = B_renorm;
       res(i) = tmp;
     }
