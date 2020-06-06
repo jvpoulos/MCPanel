@@ -1503,6 +1503,17 @@ NumericMatrix normalize_back_cols(NumericMatrix H, NumericVector col_H_scales){
   return wrap(H_new);
 }
 
+NumericMatrix normalize_back_cols_C(NumericMatrix C, NumericVector col_C_scales){
+  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
+  MatrixXd C_new = C_;
+  if(col_C_scales.size()){
+    for (int i=0; i < col_C_scales.size(); i++){
+      C_new.col(i) = C_new.col(i) / col_C_scales(i);
+    }
+  }
+  return wrap(C_new);
+}
+
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1754,9 +1765,10 @@ int mcnnm_wc_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMat
   if(lambda_B.size() > 0){
     num_lam_B = lambda_B.size();
   }
+  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
   const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
   const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
-  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
+
   if(mask_check(mask) == 0){
     std::cerr << "Error: The mask matrix should only include 0 (for missing) and 1 (for observed entries)" << std::endl;
     return 0;
@@ -1856,6 +1868,14 @@ List mcnnm_wc(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z
       List tmp = res(i);
       NumericMatrix H_renorm = normalize_back_cols(tmp["H"], Z_col_norms);
       tmp["H"] = H_renorm;
+      res(i) = tmp;
+    }
+  }
+  if(to_normalize == 1 && C_.cols()>0){
+    for(int i=0; i<res.size(); i++){
+      List tmp = res(i);
+      NumericMatrix B_renorm = normalize_back_cols_C(tmp["H"], C_col_norms);
+      tmp["B"] = B_renorm;
       res(i) = tmp;
     }
   }
@@ -2042,7 +2062,7 @@ List mcnnm_wc_fit(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatr
   }
   if(to_normalize == 1 && C_.cols()>0){
     List tmp = final_config;
-    NumericMatrix B_renorm = normalize_back_cols(final_config["B"], C_col_norms);
+    NumericMatrix B_renorm = normalize_back_cols_C(final_config["B"], C_col_norms);
     final_config ["B"]= B_renorm;
   }
 
@@ -2176,7 +2196,7 @@ List mcnnm_wc_cv(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatri
     throw std::invalid_argument("Invalid inputs ! Please modify");
   }
 
-  const Map<MatrixXd> C_(as<Map<MatrixXd> >(X));
+  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
   const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
   const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
 
@@ -2206,12 +2226,6 @@ List mcnnm_wc_cv(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatri
   }
 
   res = NNM_CV_H(M, C_norm, X_norm, Z_norm, mask, W, to_estimate_u, to_estimate_v, to_add_ID, num_lam_L, num_lam_H, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet);
-  if(to_normalize == 1 && C_.cols()>0){
-    List tmp = res;
-    NumericMatrix B_renorm = normalize_back_rows(tmp["B"], C_col_norms);
-    tmp["B"] = B_renorm;
-    res = tmp;
-  }
   if(to_normalize == 1 && X_.cols()>0){
     List tmp = res;
     NumericMatrix H_renorm = normalize_back_rows(tmp["H"], X_col_norms);
@@ -2224,5 +2238,11 @@ List mcnnm_wc_cv(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatri
     tmp["H"] = H_renorm;
     res = tmp;
   }
+  if(to_normalize == 1 && C_.cols()>0){
+    List tmp = res;
+    NumericMatrix B_renorm = normalize_back_cols_C(tmp["B"], C_col_norms);
+    tmp["B"] = B_renorm;
+    res = tmp;
+  }  
   return res;
 }
