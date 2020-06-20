@@ -562,7 +562,7 @@ List create_folds(NumericMatrix M, NumericMatrix mask, NumericMatrix W, bool to_
   return out;
 }
 
-List create_folds_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, bool to_estimate_u, bool to_estimate_v, NumericMatrix mask, NumericMatrix W, int niter = 1000, double rel_tol = 1e-5, double cv_ratio = 0.8, int num_folds=5){
+List create_folds_B(NumericMatrix M, NumericMatrix C, bool to_estimate_u, bool to_estimate_v, NumericMatrix mask, NumericMatrix W, int niter = 1000, double rel_tol = 1e-5, double cv_ratio = 0.8, int num_folds=5){
 
   // This function creates folds for cross-validation. Each fold contains a training and validation sets.
   // For each of these folds the initial solutions for fixed effects are then computed, as for large lambda_L and and lambda_B,
@@ -1025,7 +1025,7 @@ List NNM_CV_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatri
   const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
   int num_rows = M_.rows();
   int num_cols = M_.cols();
-  List confgs = create_folds_B(M, C, B, to_estimate_u, to_estimate_v, mask, W, niter, rel_tol, cv_ratio, num_folds);
+  List confgs = create_folds_B(M, C, to_estimate_u, to_estimate_v, mask, W, niter, rel_tol, cv_ratio, num_folds);
 
   double max_lam_L=-1;
   double max_lam_B=-1;
