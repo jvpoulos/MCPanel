@@ -2,20 +2,16 @@
 % Please edit documentation in R/RcppExports.R
 \name{mcnnm_wc_lam_range}
 \alias{mcnnm_wc_lam_range}
-\title{This function computes the minimum value of lambda_L and lambda_H and lambda_B which causes L and H and B to be zero. 
-User can get the output of this function and fit the low-rank matrix L, and the sparse matrices H and B, for her desired values of lambda_L and lambda_H and lambda_B.}
+\title{This function computes the minimum value of lambda_L and lambda_B which causes L and B to be zero. 
+User can get the output of this function and fit the low-rank matrix L, and the sparse matrix B, for her desired values of lambda_L and lambda_B.}
 \usage{
-mcnnm_wc_lam_range(M, C, X, Z, mask, W, to_normalize = 1L, to_estimate_u = 1L,
-  to_estimate_v = 1L, to_add_ID = 1L, niter = 1000L, rel_tol = 1e-05)
+mcnnm_wc_lam_range(M, C, mask, W, to_normalize = 1L, to_estimate_u = 1L,
+  to_estimate_v = 1L, niter = 1000L, rel_tol = 1e-05)
 }
 \arguments{
 \item{M}{Matrix of observed entries. The input should be N (number of units) by T (number of time periods).}
 
 \item{C}{Matrix containing time -and unit-related covariates. The dimensions of C should match those of M. If time- and unit-related covariates do not exist C = matrix(0L,0,0,0,0) should be used as input.}
-
-\item{X}{Matrix containing unit-related covariates. The number of rows of X should match with the number of units (number of rows of M). If unit-related covariates do not exist X = matrix(0L,0,0) should be used as input.}
-
-\item{Z}{Matrix containing time-related covariates. The number of rows of Z should match with the number of time periods (number of columns in M). If time-related covariates do not exist use Z = matrix(0L,0,0)}
 
 \item{mask}{Binary mask with the same shape as M containing observed entries.}
 
@@ -25,7 +21,6 @@ mcnnm_wc_lam_range(M, C, X, Z, mask, W, to_normalize = 1L, to_estimate_u = 1L,
 
 \item{to_estimate_u}{Optional boolean input for wheter estimating fixed unit effects (row means of M) or not. Default is 1.}
 
-\item{to_add_ID}{Optional boolean parameter indicating whether identity matrices are concatenated with X and Z in the model X * H * Z'. The default value is true (identity matrices are concatenated) and the model becomes X*H_X + X*H_{XZ}*Z^T+ H_Z Z^T (the rest of matrix in H forced to zero).}
 
 \item{niter}{Optional parameter on the number of iterations taken in the algorithm for each fixed value of lambda_L. The default value is 1000 and it is sufficiently large as the algorithm is using warm-start strategy.}
 
@@ -35,11 +30,11 @@ mcnnm_wc_lam_range(M, C, X, Z, mask, W, to_normalize = 1L, to_estimate_u = 1L,
 The minimum value of lambda_L and lambda_H and lambda_B which makes L and H and B equal to zero. This function is helpful when user wants to manually choose (lambda_L, lambda_H, lambda_B) pair.
 }
 \description{
-This function computes the minimum value of lambda_L and lambda_H and lambda_B which causes L and H and B to be zero. 
-User can get the output of this function and fit the low-rank matrix L, and the sparse matrices H and B, for her desired values of lambda_L and lambda_H and lambda_B.
+This function computes the minimum value of lambda_L and lambda_H and lambda_B which causes L and B to be zero. 
+User can get the output of this function and fit the low-rank matrix L, and the sparse matrix B, for her desired values of lambda_L and lambda_B.
 }
 \examples{
-mcnnm_wc_lam_range(M = replicate(5,rnorm(5)), C = replicate(5,rnorm(5)), X = replicate(3, rnorm(5)), Z = matrix(0L, 0, 0),  mask = matrix(rbinom(5*5,1,0.8),5,5), W = matrix(runif(5*5,0,1),5,5))
+mcnnm_wc_lam_range(M = replicate(5,rnorm(5)), C = replicate(5,rnorm(5)), mask = matrix(rbinom(5*5,1,0.8),5,5), W = matrix(runif(5*5,0,1),5,5))
 }
 \seealso{
 \code{\link{mcnnm_lam_range}}

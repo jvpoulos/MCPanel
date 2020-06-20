@@ -28,4 +28,4 @@ LazyData: true
 Imports: Rcpp (>= 0.12.13), RcppEigen, latex2exp, ggplot2, glmnet 
 LinkingTo: Rcpp, RcppEigen
 License: GPL-2
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1

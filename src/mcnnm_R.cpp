@@ -13,7 +13,7 @@ using namespace Eigen;
 using namespace Rcpp;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//////// Core Functions : All functions that have _H in the very end of their name,
+//////// Core Functions : All functions that have _B in the very end of their name,
 ////////                  consider the case where covariates exist.
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 List MySVD(NumericMatrix M){
@@ -67,39 +67,22 @@ NumericMatrix ComputeMatrix(NumericMatrix L, NumericVector u, NumericVector v){
   return wrap(res_);
 }
 
-NumericMatrix ComputeMatrix_H(NumericMatrix L, NumericMatrix C, NumericMatrix B, NumericMatrix X, NumericMatrix Z, NumericMatrix H, NumericVector u, NumericVector v, bool to_add_ID){
+NumericMatrix ComputeMatrix_B(NumericMatrix L, NumericMatrix C, NumericMatrix B, NumericVector u, NumericVector v){
 
-  // This function computes L + B*C^T + X*H*Z^T + u1^T + 1v^T, which is our decomposition.
+  // This function computes L + B*C + u1^T + 1v^T, which is our decomposition.
 
   using Eigen::Map;
   const Map<MatrixXd> L_(as<Map<MatrixXd> >(L));
   const Map<VectorXd> u_(as<Map<VectorXd> >(u));
   const Map<VectorXd> v_(as<Map<VectorXd> >(v));
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
-  const Map<MatrixXd> H_(as<Map<MatrixXd> >(H));
   const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
 
-  int H_rows_bef = X.cols();
-  int H_cols_bef = Z.cols();
   int num_rows = L_.rows();
   int num_cols = L_.cols();
-  if(to_add_ID == 1){
-    H_rows_bef = X_.cols()-num_rows;
-    H_cols_bef = Z_.cols()-num_cols;
-  }
 
-  MatrixXd res_;
-  if(to_add_ID == 0){
-    res_ = L_ + C_ * B_ + X_ * H_ * Z_.transpose() + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
-  }
-  else{
-    res_ = L_ + C_ * B_ + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
-    res_ += X_.topLeftCorner(num_rows, H_rows_bef) * H_.topLeftCorner(H_rows_bef, H_cols_bef) * Z_.topLeftCorner(num_cols,H_cols_bef).transpose();
-    res_ += X_.topLeftCorner(num_rows, H_rows_bef) * H_.topRightCorner(H_rows_bef, num_cols);
-    res_ += H_.bottomLeftCorner(num_rows, H_cols_bef) * Z_.topLeftCorner(num_cols, H_cols_bef).transpose();
-  }
+  res_ = L_ + C_ * B_ + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
+
   return wrap(res_);
 }
 
@@ -126,24 +109,22 @@ double Compute_objval(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Nume
   return obj_val;
 }
 
-double Compute_objval_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix X, NumericMatrix Z, NumericMatrix H, NumericMatrix mask, NumericMatrix L, NumericMatrix W, NumericVector u, NumericVector v, bool to_add_ID, double sum_sing_vals, double lambda_L, double lambda_H, double lambda_B){
+double Compute_objval_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix mask, NumericMatrix L, NumericMatrix W, NumericVector u, NumericVector v, double sum_sing_vals, double lambda_L, double lambda_B){
 
   // This function computes our objective value which is decomposed as the weighted combination of error plus nuclear norm of L
-  // and also element-wise norm 1 of H and B.
+  // and also element-wise norm 1 of B.
 
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
   const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
-  const Map<MatrixXd> H_(as<Map<MatrixXd> >(H));
   const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
 
   int train_size = mask_.sum();
 
-  double norm_H = H_.array().abs().sum();
   double norm_B = B_.array().abs().sum();
 
-  NumericMatrix est_mat = ComputeMatrix_H(L, C, B, X, Z, H, u, v, to_add_ID);
+  NumericMatrix est_mat = ComputeMatrix_B(L, C, B, u, v);
   const Map<MatrixXd> est_mat_(as<Map<MatrixXd> >(est_mat));
 
   MatrixXd err_mat_ = est_mat_ - M_;
@@ -151,7 +132,7 @@ double Compute_objval_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, Numer
 
   MatrixXd w_mask_ = (W_.array()) * mask_.array();
 
-  double obj_val = (double(1)/train_size) * w_mask_.sum() * (err_mask_.cwiseProduct(err_mask_)).sum() + lambda_L * sum_sing_vals + lambda_H*norm_H + lambda_B*norm_B;
+  double obj_val = (double(1)/train_size) * w_mask_.sum() * (err_mask_.cwiseProduct(err_mask_)).sum() + lambda_L * sum_sing_vals + lambda_B*norm_B;
   return obj_val;
 }
 
@@ -172,37 +153,16 @@ double Compute_RMSE(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Numeri
   return res;
 }
 
-double Compute_RMSE_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix X, NumericMatrix Z, NumericMatrix H, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v, bool to_add_ID){
+double Compute_RMSE_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v){
 
-  // This function computes Root Mean Squared Error of computed decomposition L, B, H, u, v.
+  // This function computes Root Mean Squared Error of computed decomposition L, B, u, v.
 
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
-  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-
-  int num_rows = M_.rows();
-  int num_cols = M_.cols();
-  MatrixXd Xfin = X_;
-  MatrixXd Zfin = Z_;
-  if(to_add_ID == 1){
-    MatrixXd X_add = MatrixXd::Identity(num_rows, num_rows);
-    MatrixXd Z_add = MatrixXd::Identity(num_cols, num_cols);
-    MatrixXd X_conc(num_rows, X_.cols()+X_add.cols());
-    X_conc << X_, X_add;
-    Xfin = X_conc;
-    MatrixXd Z_conc(num_cols, Z_.cols()+Z_add.cols());
-    Z_conc << Z_, Z_add;
-    Zfin = Z_conc;
-  }
-  NumericMatrix Xp = wrap(Xfin);
-  NumericMatrix Zp = wrap(Zfin);
-
   double res = 0;
   int valid_size = mask_.sum();
-  NumericMatrix est_mat = ComputeMatrix_H(L, C, B, Xp, Zp, H, u, v, to_add_ID);
+  NumericMatrix est_mat = ComputeMatrix_B(L, C, B, u, v);
   const Map<MatrixXd> est_mat_(as<Map<MatrixXd> >(est_mat));
   MatrixXd err_mat_ = est_mat_ - M_;
   MatrixXd err_mask_ = err_mat_.array() * mask_.array();
@@ -259,7 +219,7 @@ List update_L(NumericMatrix M, NumericMatrix mask, NumericMatrix L, NumericVecto
                       Named("Sigma") = sing);
 }
 
-List update_L_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix X, NumericMatrix Z, NumericMatrix H, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v, bool to_add_ID, double lambda_L){
+List update_L_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v, double lambda_L){
 
   // This function updates L in coordinate descent algorithm. The core step of this part is
   // performing a SVT update. Furthermore, it saves the singular values (needed to compute objective value) later.
@@ -271,7 +231,7 @@ List update_L_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix
   const Map<MatrixXd> L_(as<Map<MatrixXd> >(L));
 
   int train_size = mask_.sum();
-  NumericMatrix P = ComputeMatrix_H(L, C, B, X, Z, H, u, v, to_add_ID);
+  NumericMatrix P = ComputeMatrix_B(L, C, B, u, v);
   const Map<MatrixXd> P_(as<Map<MatrixXd> >(P));
   MatrixXd P_omega_ = M_ - P_;
   MatrixXd masked_P_omega_ = P_omega_.cwiseProduct(mask_);
@@ -315,7 +275,7 @@ NumericVector update_u(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Num
   return wrap(res);
 }
 
-NumericVector update_u_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix X, NumericMatrix Z, NumericMatrix H, NumericMatrix mask, NumericMatrix L, NumericVector v){
+NumericVector update_u_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix mask, NumericMatrix L, NumericVector v){
 
   // This function updates u in coordinate descent algorithm, when covariates are available.
 
@@ -325,11 +285,8 @@ NumericVector update_u_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, Nume
   const Map<MatrixXd> L_(as<Map<MatrixXd> >(L));
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
   const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
-  const Map<MatrixXd> H_(as<Map<MatrixXd> >(H));
   const Map<VectorXd> v_(as<Map<VectorXd> >(v));
-  MatrixXd T_ = C_ * B_ + X_ * H_ * Z_.transpose();
+  MatrixXd T_ = C_ * B_;
 
   VectorXd res(M_.rows(),1);
   for (int i = 0; i<M_.rows(); i++){
@@ -373,7 +330,7 @@ NumericVector update_v(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Num
   return wrap(res);
 }
 
-NumericVector update_v_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix X, NumericMatrix Z, NumericMatrix H, NumericMatrix mask, NumericMatrix L, NumericVector u){
+NumericVector update_v_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix mask, NumericMatrix L, NumericVector u){
 
   // This function updates the matrix v in the coordinate descent algorithm, when covariates exist.
 
@@ -383,11 +340,8 @@ NumericVector update_v_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, Nume
   const Map<MatrixXd> L_(as<Map<MatrixXd> >(L));
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
   const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
-  const Map<MatrixXd> H_(as<Map<MatrixXd> >(H));
   const Map<VectorXd> u_(as<Map<VectorXd> >(u));
-  MatrixXd T_ = C_ * B_ + X_ * H_ * Z_.transpose();
+  MatrixXd T_ = C_ * B_;
 
   VectorXd res(M_.cols(),1);
   for (int i = 0; i<M_.cols(); i++)
@@ -428,101 +382,7 @@ NumericMatrix Reshape(NumericVector M, int row, int col){
   return wrap(res);
 }
 
-List update_H_H(NumericMatrix M, NumericMatrix X, NumericMatrix Z, NumericMatrix H, NumericMatrix T, NumericVector in_prod, NumericVector in_prod_T, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v, bool to_add_ID, double lambda_H){
-  // This function updates the matrix H in the coordinate descent algorithm. The key idea is to use the soft-thresholding operator.
-
-  using Eigen::Map;
-  const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
-  const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
-  const Map<MatrixXd> H_(as<Map<MatrixXd> >(H));
-  const Map<MatrixXd> T_(as<Map<MatrixXd> >(T));
-  const Map<VectorXd> in_prod_(as<Map<VectorXd> >(in_prod));
-  const Map<VectorXd> in_prod_T_(as<Map<VectorXd> >(in_prod_T));
-  VectorXd inn_prod = in_prod_;
-  int H_rows = X_.cols();
-  int H_cols = Z_.cols();
-  int num_rows = M_.rows();
-  int num_cols = M_.cols();
-  int num_train = mask_.sum();
-  int H_cols_bef = H_rows;
-  int H_rows_bef = H_cols;
-  if(to_add_ID == 1){
-    H_rows_bef = X_.cols()-num_rows;
-    H_cols_bef = Z_.cols()-num_cols;
-  }
-  NumericMatrix M_hat = ComputeMatrix(L,u,v);
-  const Map<MatrixXd> M_hat_(as<Map<MatrixXd> >(M_hat));
-  MatrixXd b = (M_-M_hat_).cwiseProduct(mask_)/(std::sqrt(num_train));
-  NumericVector b_resh = Reshape_Mat(wrap(b));
-  const Map<VectorXd> b_resh_(as<Map<VectorXd> >(b_resh));
-
-  NumericVector H_resh = Reshape_Mat(wrap(H_));
-  const Map<VectorXd> H_resh_(as<Map<VectorXd> >(H_resh));
-  VectorXd H__ = H_resh_;
-  if(to_add_ID == 1){
-    if(H_cols_bef > 0){
-      for(int j = 0; j< H_cols_bef; j++){
-        for (int i = 0; i<H_rows; i++){
-          int cur_elem = j*H_rows + i;
-          double U = in_prod_T_(cur_elem);
-          if (U == 0){
-            H__(cur_elem) = 0;
-          }
-          else{
-            VectorXd b_tilde = b_resh_ - inn_prod + T_.col(cur_elem) * H__(cur_elem);
-            double V = b_tilde.transpose() * T_.col(cur_elem);
-            double H_new = (double(1)/2) * ( std::max( (2*V-lambda_H)/U, double(0)) - std::max( (-2*V-lambda_H)/U ,double(0)) );
-            inn_prod += (H_new - H__(cur_elem))*T_.col(cur_elem);
-            H__(cur_elem) = H_new;
-          }
-        }
-      }
-    }
-    if(H_rows_bef>0){
-      for(int j = H_cols_bef; j<H_cols; j++){
-        for (int i = 0; i<H_rows_bef; i++){
-          int cur_elem = j*H_rows + i;
-          double U = in_prod_T_(cur_elem);
-          if (U == 0){
-            H__(cur_elem) = 0;
-          }
-          else{
-            VectorXd b_tilde = b_resh_ - inn_prod + T_.col(cur_elem) * H__(cur_elem);
-            double V = b_tilde.transpose() * T_.col(cur_elem);
-            double H_new = (double(1)/2) * ( std::max( (2*V-lambda_H)/U, double(0)) - std::max( (-2*V-lambda_H)/U ,double(0)) );
-            inn_prod += (H_new - H__(cur_elem))*T_.col(cur_elem);
-            H__(cur_elem) = H_new;
-          }
-        }
-      }
-    }
-  } else{
-    for(int j = 0; j<H_cols; j++){
-      for (int i = 0; i<H_rows; i++){
-        int cur_elem = j*H_rows + i;
-        double U = in_prod_T_(cur_elem);
-        if (U == 0){
-          H__(cur_elem) = 0;
-        }
-        else{
-          VectorXd b_tilde = b_resh_ - inn_prod + T_.col(cur_elem) * H__(cur_elem);
-          double V = b_tilde.transpose() * T_.col(cur_elem);
-          double H_new = (double(1)/2) * ( std::max( (2*V-lambda_H)/U, double(0)) - std::max( (-2*V-lambda_H)/U ,double(0)) );
-          inn_prod += (H_new - H__(cur_elem))*T_.col(cur_elem);
-          H__(cur_elem) = H_new;
-        }
-      }
-    }
-  }
-  in_prod = wrap(inn_prod);
-  NumericMatrix res = Reshape(wrap(H__), H_rows, H_cols);
-  return List::create(Named("H") = res,
-                      Named("in_prod") = in_prod);
-}
-
-NumericMatrix update_B_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix X, NumericMatrix Z, NumericMatrix H, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v, bool to_add_ID, double lambda_B){
+NumericMatrix update_B_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v, double lambda_B){
 
   // This function updates the matrix B in the coordinate descent algorithm. The core step of this part is
   // performing a SVT update.
@@ -533,7 +393,7 @@ NumericMatrix update_B_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, Nume
   const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
 
   int train_size = mask_.sum();
-  NumericMatrix P = ComputeMatrix_H(L, C, B, X, Z, H, u, v, to_add_ID);
+  NumericMatrix P = ComputeMatrix_B(L, C, B, u, v);
   const Map<MatrixXd> P_(as<Map<MatrixXd> >(P));
   MatrixXd P_omega_ = M_ - P_;
   MatrixXd masked_P_omega_ = P_omega_.cwiseProduct(mask_);
@@ -605,36 +465,18 @@ List initialize_uv(NumericMatrix M, NumericMatrix mask, NumericMatrix W, bool to
                       Named("lambda_L_max") = lambda_L_max);
   }
 
-List initialize_uv_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, bool to_estimate_u, bool to_estimate_v, bool to_add_ID, int niter = 1000, double rel_tol = 1e-5){
+List initialize_uv_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_estimate_u, bool to_estimate_v, int niter = 1000, double rel_tol = 1e-5){
 
-    // This function solves finds the optimal u and v assuming that L and H and B are zero. This would be later
-    // helpful when we want to perform warm start on values of lambda_L and lambda_H and lambda_B. This function also outputs
-    // the smallest value of lambda_L and lambda_H and labmda_B which causes L and H to be zero.
+    // This function solves finds the optimal u and v assuming that L and B are zero. This would be later
+    // helpful when we want to perform warm start on values of lambda_L and  lambda_B. This function also outputs
+    // the smallest value of lambda_L and labmda_B which causes L and B to be zero.
 
     using Eigen::Map;
     const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
     const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
     const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-    const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-    const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
-    MatrixXd Xfin = X_;
-    MatrixXd Zfin = Z_;
     int num_rows = M_.rows();
     int num_cols = M_.cols();
-    if(to_add_ID == 1){
-      MatrixXd X_add = MatrixXd::Identity(num_rows, num_rows);
-      MatrixXd Z_add = MatrixXd::Identity(num_cols, num_cols);
-      MatrixXd X_conc(num_rows, X_.cols()+X_add.cols());
-      X_conc << X_, X_add;
-      Xfin = X_conc;
-      MatrixXd Z_conc(num_cols, Z_.cols()+Z_add.cols());
-      Z_conc << Z_, Z_add;
-      Zfin = Z_conc;
-    }
-    int H_rows = Xfin.cols();
-    int H_cols = Zfin.cols();
-    NumericMatrix Xp = wrap(Xfin);
-    NumericMatrix Zp = wrap(Zfin);
 
     JacobiSVD<MatrixXd> svd(M_.rows(), M_.cols());
     double obj_val=0;
@@ -642,35 +484,33 @@ List initialize_uv_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericM
     VectorXd u_ = VectorXd::Zero(num_rows);
     VectorXd v_ = VectorXd::Zero(num_cols);
     MatrixXd L_ = MatrixXd::Zero(num_rows,num_cols);
-    MatrixXd H_ = MatrixXd::Zero(H_rows,H_cols);
     MatrixXd B_ = MatrixXd::Zero(num_rows,num_cols);
     NumericVector u = wrap(u_);
     NumericVector v = wrap(v_);
     NumericMatrix L = wrap(L_);
-    NumericMatrix H = wrap(H_);
     NumericMatrix B = wrap(B_);
-    obj_val = Compute_objval_H(M, C, B, Xp, Zp, H, mask, L, W, u , v, to_add_ID, 0, 0, 0, 0);
+    obj_val = Compute_objval_B(M, C, B, mask, L, W, u , v, 0, 0, 0);
     for(int iter = 0; iter < niter; iter++){
       if(to_estimate_u == 1){
-        u = update_u_H(M, C, B, Xp, Zp, H, mask, L, v);
+        u = update_u_B(M, C, B, mask, L, v);
       }
       else{
         u = wrap(VectorXd::Zero(num_rows));
       }
       if(to_estimate_v == 1){
-        v = update_v_H(M, C, B, Xp, Zp, H, mask, L, u);
+        v = update_v_B(M, C, B, mask, L, u);
       }
       else{
         v = wrap(VectorXd::Zero(num_rows));
       }
-      new_obj_val = Compute_objval_H(M, C, B, Xp, Zp, H, mask, L, W, u, v, to_add_ID, 0, 0, 0, 0);
+      new_obj_val = Compute_objval_B(M, C, B, mask, L, W, u, v, 0, 0, 0);
       double rel_error = (new_obj_val-obj_val)/obj_val;
       if(rel_error < rel_tol && rel_error >= 0){
         break;
       }
       obj_val = new_obj_val;
     }
-    NumericMatrix E = ComputeMatrix_H(L, C, B, Xp, Zp, H, u, v, to_add_ID);
+    NumericMatrix E = ComputeMatrix_B(L, C, B, u, v);
     const Map<MatrixXd> E_(as<Map<MatrixXd> >(E));
     MatrixXd P_omega_ = (M_ - E_).array()*mask_.array();
     svd.compute(P_omega_);
@@ -678,32 +518,10 @@ List initialize_uv_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericM
 
     double lambda_B_max = 2.0 * svd.singularValues().maxCoeff()/mask_.sum();
 
-    MatrixXd T_ = MatrixXd::Zero(num_rows*num_cols, H_rows*H_cols);
-    VectorXd in_prod_T = VectorXd::Zero(H_rows*H_cols);
-    for (int j = 0; j<H_cols; j++){
-      for (int i = 0; i<H_rows; i++){
-        MatrixXd out_prod = (Xfin.col(i) * Zfin.col(j).transpose()).cwiseProduct(mask_);
-        Map<VectorXd>(out_prod.data(), out_prod.size());
-        int index = j*H_rows+i;
-        T_.col(index) = out_prod;
-        in_prod_T(index) = T_.col(index).transpose()*T_.col(index);
-      }
-    }
-    int num_train = mask_.sum();
-    T_ = T_/std::sqrt(num_train);
-    in_prod_T = in_prod_T/num_train;
-    NumericVector P_omega_resh = Reshape_Mat(wrap(P_omega_));
-    const Map<VectorXd> P_omega_resh_(as<Map<VectorXd> >(P_omega_resh));
-    VectorXd all_Vs = (T_.transpose()*P_omega_resh_)/std::sqrt(num_train);
-    double lambda_H_max = 2*(all_Vs.array()).abs().maxCoeff();
-
     return List::create(Named("u") = u,
                         Named("v") = v,
                         Named("lambda_L_max") = lambda_L_max,
-                        Named("lambda_H_max") = lambda_H_max,
-                        Named("lambda_B_max") = lambda_B_max,
-                        Named("T_mat") = T_,
-                        Named("in_prod_T") = in_prod_T);
+                        Named("lambda_B_max") = lambda_B_max);
 }
 
 List create_folds(NumericMatrix M, NumericMatrix mask, NumericMatrix W, bool to_estimate_u, bool to_estimate_v, int niter = 1000, double rel_tol = 1e-5, double cv_ratio = 0.8, int num_folds=5){
@@ -744,11 +562,11 @@ List create_folds(NumericMatrix M, NumericMatrix mask, NumericMatrix W, bool to_
   return out;
 }
 
-List create_folds_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix X, NumericMatrix Z, bool to_estimate_u, bool to_estimate_v, bool to_add_ID, NumericMatrix mask, NumericMatrix W, int niter = 1000, double rel_tol = 1e-5, double cv_ratio = 0.8, int num_folds=5){
+List create_folds_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, bool to_estimate_u, bool to_estimate_v, NumericMatrix mask, NumericMatrix W, int niter = 1000, double rel_tol = 1e-5, double cv_ratio = 0.8, int num_folds=5){
 
   // This function creates folds for cross-validation. Each fold contains a training and validation sets.
-  // For each of these folds the initial solutions for fixed effects are then computed, as for large lambda_L and lambda_H and lambda_B,
-  // L and H would be equal to zero. This initialization is very helpful as it will be used later for the warm start.
+  // For each of these folds the initial solutions for fixed effects are then computed, as for large lambda_L and and lambda_B,
+  // L and B would be equal to zero. This initialization is very helpful as it will be used later for the warm start.
 
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
@@ -772,15 +590,12 @@ List create_folds_H(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMa
     NumericMatrix fold_mask = wrap(fold_mask_);
     NumericMatrix M_tr = wrap(M_tr_);
     NumericMatrix W_tr = wrap(W_tr_);
-    List tmp_uv = initialize_uv_H(M_tr, C, X, Z, fold_mask, W_tr, to_estimate_u, to_estimate_v, to_add_ID, niter = 1000, rel_tol = 1e-5);
+    List tmp_uv = initialize_uv_B(M_tr, C, fold_mask, W_tr, to_estimate_u, to_estimate_v, niter = 1000, rel_tol = 1e-5);
     List fold_k = List::create(Named("u") = tmp_uv["u"],
                                Named("v") = tmp_uv["v"],
                                Named("lambda_L_max") = tmp_uv["lambda_L_max"],
-                               Named("lambda_H_max") = tmp_uv["lambda_H_max"],
                                Named("lambda_B_max") = tmp_uv["lambda_B_max"],
-                               Named("fold_mask") = fold_mask,
-                               Named("T_mat") = tmp_uv["T_mat"],
-                               Named("in_prod_T") = tmp_uv["in_prod_T"]);
+                               Named("fold_mask") = fold_mask);
     out[k] = fold_k;
   }
   return out;
@@ -844,41 +659,25 @@ List NNM_fit(NumericMatrix M, NumericMatrix mask, NumericMatrix L_init, NumericM
                       Named("v") = v);
 }
 
-List NNM_fit_H(NumericMatrix M, NumericMatrix C, NumericMatrix B_init, NumericMatrix X, NumericMatrix Z, NumericMatrix H_init, NumericMatrix T, NumericVector in_prod, NumericVector in_prod_T, NumericMatrix mask, NumericMatrix L_init, NumericMatrix W, NumericVector u_init, NumericVector v_init, bool to_estimate_u, bool to_estimate_v, bool to_add_ID , double lambda_L, double lambda_H, double lambda_B, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
+List NNM_fit_B(NumericMatrix M, NumericMatrix C, NumericMatrix B_init, NumericMatrix mask, NumericMatrix L_init, NumericMatrix W, NumericVector u_init, NumericVector v_init, bool to_estimate_u, bool to_estimate_v, double lambda_L, double lambda_B, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
 
   // This function performs cyclic coordinate descent updates.
   // For given matrices M, mask, and initial starting decomposition given by L_init, u_init, and v_init,
-  // matrices L, B, H, u, and v are updated till convergence via coordinate descent.
+  // matrices L, B, u, and v are updated till convergence via coordinate descent.
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
   int num_rows = M_.rows();
   int num_cols = M_.cols();
-  MatrixXd Xfin = X_;
-  MatrixXd Zfin = Z_;
-  if(to_add_ID == 1){
-    MatrixXd X_add = MatrixXd::Identity(num_rows, num_rows);
-    MatrixXd Z_add = MatrixXd::Identity(num_cols, num_cols);
-    MatrixXd X_conc(num_rows, X_.cols()+X_add.cols());
-    X_conc << X_, X_add;
-    Xfin = X_conc;
-    MatrixXd Z_conc(num_cols, Z_.cols()+Z_add.cols());
-    Z_conc << Z_, Z_add;
-    Zfin = Z_conc;
-  }
-  NumericMatrix Xp = wrap(Xfin);
-  NumericMatrix Zp = wrap(Zfin);
+
   double obj_val;
   double new_obj_val=0;
   List svd_dec;
   svd_dec = MySVD(L_init);
   VectorXd sing = svd_dec["Sigma"];
   double sum_sigma = sing.sum();
-  obj_val = Compute_objval_H(M, C, B_init, Xp, Zp, H_init, mask, L_init, W, u_init, v_init, to_add_ID, sum_sigma, lambda_L, lambda_H, lambda_B);
+  obj_val = Compute_objval_B(M, C, B_init, mask, L_init, W, u_init, v_init, sum_sigma, lambda_L, lambda_B);
   NumericMatrix B = B_init;
-  NumericMatrix H = H_init;
   NumericMatrix L = L_init;
   NumericVector u = u_init;
   NumericVector v = v_init;
@@ -886,35 +685,29 @@ List NNM_fit_H(NumericMatrix M, NumericMatrix C, NumericMatrix B_init, NumericMa
   for(int iter = 0; iter < niter; iter++){
     // Update u
     if(to_estimate_u == 1){
-      u = update_u_H(M, C, B, Xp, Zp, H, mask, L, v);
+      u = update_u_B(M, C, B, mask, L, v);
     }
     else{
       u = wrap(VectorXd::Zero(M.rows()));
     }
     // Update v
     if(to_estimate_v == 1){
-      v = update_v_H(M, C, B, Xp, Zp, H, mask, L, u);
+      v = update_v_B(M, C, B, mask, L, u);
     }
     else{
       v = wrap(VectorXd::Zero(M.cols()));
     }
     // Update B
-    NumericMatrix upd_B = update_B_H(M, C, B, Xp, Zp, H, mask, L, u, v, to_add_ID, lambda_B);
+    NumericMatrix upd_B = update_B_B(M, C, B, mask, L, u, v, lambda_B);
     B = upd_B;
-    // Update H
-    List upd_H = update_H_H(M, Xp, Zp, H, T, in_prod, in_prod_T, mask, L, u, v, to_add_ID, lambda_H);
-    NumericMatrix H_upd = upd_H["H"];
-    H = H_upd;
-    NumericVector prod_in = upd_H["in_prod"];
-    in_prod = prod_in;
     // Update L
-    List upd_L = update_L_H(M, C, B, Xp, Zp, H, mask, L, u, v, to_add_ID, lambda_L);
+    List upd_L = update_L_B(M, C, B, mask, L, u, v, lambda_L);
     NumericMatrix L_upd = upd_L["L"];
     L = L_upd;
     sing = upd_L["Sigma"];
     double sum_sigma = sing.sum();
     // Check if accuracy is achieved
-    new_obj_val = Compute_objval_H(M, C, B, Xp, Zp, H, mask, L, W, u, v, to_add_ID, sum_sigma, lambda_L, lambda_H, lambda_B);
+    new_obj_val = Compute_objval_B(M, C, B, mask, L, W, u, v, sum_sigma, lambda_L, lambda_B);
     double rel_error = (obj_val-new_obj_val)/obj_val;
     if(new_obj_val < 1e-8){
       break;
@@ -926,14 +719,12 @@ List NNM_fit_H(NumericMatrix M, NumericMatrix C, NumericMatrix B_init, NumericMa
     obj_val = new_obj_val;
   }
   if(is_quiet == 0){
-    std::cout << "Terminated at iteration : " << term_iter << ", for lambda_L :" << lambda_L << ", lambda_H : " << lambda_H << ", with obj_val :" << new_obj_val << std::endl;
+    std::cout << "Terminated at iteration : " << term_iter << ", for lambda_L :" << lambda_L << ", with obj_val :" << new_obj_val << std::endl;
   }
-  return List::create(Named("H") = H,
-                      Named("B") = B,
+  return List::create(Named("B") = B,
                       Named("L") = L,
                       Named("u") = u,
-                      Named("v") = v,
-                      Named("in_prod") = in_prod);
+                      Named("v") = v);
 }
 
 List NNM_with_uv_init(NumericMatrix M, NumericMatrix mask, NumericMatrix W, NumericVector u_init, NumericVector v_init, bool to_estimate_u, bool to_estimate_v, NumericVector lambda_L, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
@@ -959,91 +750,55 @@ List NNM_with_uv_init(NumericMatrix M, NumericMatrix mask, NumericMatrix W, Nume
   return res;
 }
 
-List NNM_with_uv_init_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix T, NumericVector in_prod_T, NumericMatrix mask, NumericMatrix W, NumericVector u_init, NumericVector v_init, bool to_estimate_u, bool to_estimate_v, bool to_add_ID, NumericVector lambda_L, NumericVector lambda_H, NumericVector lambda_B, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
+List NNM_with_uv_init_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, NumericVector u_init, NumericVector v_init, bool to_estimate_u, bool to_estimate_v, NumericVector lambda_L, NumericVector lambda_B, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
 
   // This function actually does the warm start.
-  // Idea here is that we start from L_init=0 and H_init and B_init, and converged u_init and v_init and then find the
-  // fitted model, i.e, new L, H, B, u, and v. Then, we pass these parameters for the next value of lambda_L and lambda_H and lambda_B.
-  // Both lambda_L and lambda_H  and lambda_B vectors are sorted in decreasing order. As we are cross-validating over a grid, there
+  // Idea here is that we start from L_init=0 and and B_init, and converged u_init and v_init and then find the
+  // fitted model, i.e, new L, B, u, and v. Then, we pass these parameters for the next value of lambda_L and lambda_B.
+  // Both lambda_L  and lambda_B vectors are sorted in decreasing order. As we are cross-validating over a grid, there
   // are two options for taking as the previous model (initialization of new point on grid). Here we always use the model
-  // with lambda_L just before this model, keeping lambda_H  and lambda_B fixed. The only exception is when we are at the largest lambda_L,
-  // for which we take previous lambda_H, while keep lambda_L fixed.
+  // with lambda_L just before this model, keeping lambda_B fixed. The only exception is when we are at the largest lambda_L,
+  // for which we take previous lambda_B, while keep lambda_L fixed.
 
   int num_lam_L = lambda_L.size();
-  int num_lam_H = lambda_H.size();
   int num_lam_B = lambda_B.size();
   int num_rows = M.rows();
   int num_cols = M.cols();
-  int H_rows;
-  int H_cols;
-  if(to_add_ID == 1){
-    H_rows = X.cols()+num_rows;
-    H_cols = Z.cols()+num_cols;
-  }
-  else{
-    H_rows = X.cols();
-    H_cols = Z.cols();
-  }
-  List res(num_lam_L*num_lam_H*num_lam_B);
+  List res(num_lam_L*num_lam_B);
   NumericMatrix L_init = wrap(MatrixXd::Zero(num_rows,num_cols));
-  NumericMatrix H_init = wrap(MatrixXd::Zero(H_rows,H_cols));
   NumericMatrix B_init = wrap(MatrixXd::Zero(num_rows,num_cols));
-  NumericVector in_prod = wrap(VectorXd::Zero(num_rows*num_cols));
-  for (int k = 0; k<num_lam_B; k++){
-  	if(k > 0){
-  		List previous_B = res[(k-1)*num_lam_B];
-	    NumericMatrix L_upd = previous_B["L"];
-	    NumericMatrix B_upd = previous_B["B"];
-	    NumericMatrix H_upd = previous_B["H"];
-	    L_init = L_upd;
-	    NumericVector in_prod_upd = previous_B["in_prod"];
-	    in_prod = in_prod_upd;
-	    u_init = previous_B["u"];
-	    v_init = previous_B["v"];
-	    H_init = H_upd;
-	   	B_init = B_upd;
-	}
-	for (int j = 0; j<num_lam_H; j++){
-		if(j > 0){
-	      List previous_H = res[(j-1)*num_lam_L];
-	      NumericMatrix L_upd = previous_H["L"];
-	      NumericMatrix B_upd = previous_H["B"];
-	      NumericMatrix H_upd = previous_H["H"];
-	      L_init = L_upd;
-	      NumericVector in_prod_upd = previous_H["in_prod"];
-	      in_prod = in_prod_upd;
-	      u_init = previous_H["u"];
-	      v_init = previous_H["v"];
-	      H_init = H_upd;
-	      B_init = B_upd;
-	    }
-	    for (int i = 0; i<num_lam_L; i++){
-	      List previous_L = NNM_fit_H(M, C, B_init, X, Z, H_init, T, in_prod, in_prod_T, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, to_add_ID, lambda_L[i], lambda_H[j], lambda_B[k], niter, rel_tol, is_quiet);
-	      res[j*num_lam_L+i] = previous_L;
-	      NumericMatrix L_upd = previous_L["L"];
-	      NumericMatrix B_upd = previous_L["B"];
-	      NumericMatrix H_upd = previous_L["H"];
-	      NumericVector in_prod_upd = previous_L["in_prod"];
-	      in_prod = in_prod_upd;
-	      L_init = L_upd;
-	      u_init = previous_L["u"];
-	      v_init = previous_L["v"];
-	      H_init = H_upd;
-	      B_init = B_upd;
-	    }
-	  }
-	}
+  for (int j = 0; j<num_lam_B; j++){
+  	if(j > 0){
+      List previous_B = res[(j-1)*num_lam_B];
+      NumericMatrix L_upd = previous_B["L"];
+      NumericMatrix B_upd = previous_B["B"];
+      L_init = L_upd;
+      u_init = previous_B["u"];
+      v_init = previous_B["v"];
+      B_init = B_upd;
+   }
+   for (int i = 0; i<num_lam_L; i++){
+     List previous_L = NNM_fit_B(M, C, B_init, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, lambda_L[i], lambda_B[j], niter, rel_tol, is_quiet);
+     res[j*num_lam_L+i] = previous_L;
+     NumericMatrix L_upd = previous_L["L"];
+     NumericMatrix B_upd = previous_L["B"];
+     L_init = L_upd;
+     u_init = previous_L["u"];
+     v_init = previous_L["v"];
+     B_init = B_upd;
+   }
+ }
   return res;
 }
 
-List NNM_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, int num_lam_L = 30, int num_lam_H = 30, int num_lam_B = 30, NumericVector lambda_L = NumericVector::create(), NumericVector lambda_H = NumericVector::create(), NumericVector lambda_B = NumericVector::create(), bool to_estimate_u = 1, bool to_estimate_v = 1, bool to_add_ID = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
+List NNM_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, int num_lam_L = 30, int num_lam_B = 30, NumericVector lambda_L = NumericVector::create(), NumericVector lambda_B = NumericVector::create(), bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
 
-  // This function in its default format is just a wraper, which only passes vectors of all zero for u_init and v_init to NNM_with_uv_init_H.
-  // The function computes the good range for lambda_L and lambda_H and lambda_H  and fits using warm-start described in NNM_with_uv_init_H to all those values.
-  // The user has the ability to set vectors of lambda_L and lambda_H and lambda_H manually, although it is not advisable.
+  // This function in its default format is just a wraper, which only passes vectors of all zero for u_init and v_init to NNM_with_uv_init_B.
+  // The function computes the good range for lambda_L and lambda_B and fits using warm-start described in NNM_with_uv_init_B to all those values.
+  // The user has the ability to set vectors of lambda_L and lambda_B manually, although it is not advisable.
 
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
-  List tmp_uv = initialize_uv_H(M, C, X, Z, mask, W, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol);
+  List tmp_uv = initialize_uv_B(M, C, mask, W, to_estimate_u, to_estimate_v, niter, rel_tol);
   if(lambda_L.size() == 0){
     NumericVector lambda_Ls(num_lam_L);
     double max_lam_L=tmp_uv["lambda_L_max"];
@@ -1056,19 +811,6 @@ List NNM_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, N
   }
   else{
     num_lam_L = lambda_L.size();
-  }
-  if(lambda_H.size() == 0){
-    NumericVector lambda_Hs(num_lam_H);
-    double max_lam_H=tmp_uv["lambda_H_max"];
-    NumericVector lambda_Hs_without_zero = logsp(log10(max_lam_H), log10(max_lam_H)-3, num_lam_H-1);
-    for(int i=0; i<num_lam_H-1; i++){
-      lambda_Hs(i)= lambda_Hs_without_zero(i);
-    }
-    lambda_Hs(num_lam_H-1) = 0;
-    lambda_H = lambda_Hs;
-  }
-  else{
-    num_lam_H = lambda_H.size();
   }
   if(lambda_B.size() == 0){
     NumericVector lambda_Bs(num_lam_B);
@@ -1085,113 +827,75 @@ List NNM_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, N
   }
   List tmp_res;
   if(to_estimate_u == 1 || to_estimate_v ==1){
-    tmp_res =  NNM_with_uv_init_H(M, C, X, Z, tmp_uv["T_mat"], tmp_uv["in_prod_T"], mask, W, tmp_uv["u"], tmp_uv["v"], to_estimate_u, to_estimate_v, to_add_ID, lambda_L, lambda_H, lambda_B, niter, rel_tol, is_quiet);
+    tmp_res =  NNM_with_uv_init_B(M, C, mask, W, tmp_uv["u"], tmp_uv["v"], to_estimate_u, to_estimate_v, lambda_L, lambda_B, niter, rel_tol, is_quiet);
   }
   else{
-    tmp_res = NNM_with_uv_init_H(M, C, X, Z, tmp_uv["T_mat"], tmp_uv["in_prod_T"], mask, W, wrap(VectorXd::Zero(M_.rows())), wrap(VectorXd::Zero(M_.cols())), to_estimate_u, to_estimate_v, to_add_ID, lambda_L, lambda_H, lambda_B, niter, rel_tol, is_quiet);
+    tmp_res = NNM_with_uv_init_B(M, C, mask, W, wrap(VectorXd::Zero(M_.rows())), wrap(VectorXd::Zero(M_.cols())), to_estimate_u, to_estimate_v, lambda_L, lambda_B, niter, rel_tol, is_quiet);
   }
 
-  List out(num_lam_L*num_lam_H*num_lam_B);
-  for (int k = 0; k< num_lam_B; k++){
-    for (int j = 0; j< num_lam_H; j++){
-      for (int i = 0; i < num_lam_L; i++){
-        int current_ind = k*j*i;
-        List current_config = tmp_res(k*j*i);
-        List this_config = List::create(Named("H") = current_config["H"],
-                                        Named("B") = current_config["B"],
-                                        Named("L") = current_config["L"],
-                                        Named("u") = current_config["u"],
-                                        Named("v") = current_config["v"],
-                                        Named("lambda_L") = lambda_L[i],
-                                        Named("lambda_H") = lambda_H[j],
-                                        Named("lambda_B") = lambda_B[k]);
-        out[current_ind] = this_config;
-      }
+  List out(num_lam_L*num_lam_B);
+  for (int j = 0; j< num_lam_B; j++){
+    for (int i = 0; i < num_lam_L; i++){
+      int current_ind = j*i;
+      List current_config = tmp_res(j*i);
+      List this_config = List::create(Named("B") = current_config["B"],
+        Named("L") = current_config["L"],
+        Named("u") = current_config["u"],
+        Named("v") = current_config["v"],
+        Named("lambda_L") = lambda_L[i],
+        Named("lambda_B") = lambda_B[j]);
+      out[current_ind] = this_config;
     }
   }
   return out;
 }
 
-List NNM_with_uv_init_H_opt_path(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix T, NumericVector in_prod_T, NumericMatrix mask, NumericMatrix W, NumericVector u_init, NumericVector v_init, bool to_estimate_u, bool to_estimate_v, bool to_add_ID, NumericVector lambda_L, NumericVector lambda_H, NumericVector lambda_B, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
-  // This function is similar to NNM_H, with one key difference. This function instead of fitting to all models on the grid described by lambda_Ls and lambda_Hs and lambda_Bs
-  // only considers the shortest path from the point on the grid with highest lambda_L and lambda_H and lambda_B to the point on the grid with smallest values of lambda_L
-  // and lambda_H and and lambda_B. The key benefit of using this function is that, for chosen values of lambda_L and lambda_H and lambda_B, training can be much faster as the number of
-  // trained models is M+N+O-1 compared to M*N*O, where M is the length of lambda_L and N is the length of lambda_H and O is the length of lambda_B.
+List NNM_with_uv_init_B_opt_path(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, NumericVector u_init, NumericVector v_init, bool to_estimate_u, bool to_estimate_v, NumericVector lambda_L, NumericVector lambda_B, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
+  // This function is similar to NNM_B, with one key difference. This function instead of fitting to all models on the grid described by lambda_Ls and lambda_Bs
+  // only considers the shortest path from the point on the grid with highest lambda_L and lambda_B to the point on the grid with smallest values of lambda_L
+  // and and lambda_B. The key benefit of using this function is that, for chosen values of lambda_L and lambda_B, training can be much faster as the number of
+  // trained models is M+O-1 compared to M*O, where M is the length of lambda_L and O is the length of lambda_B.
 
   int num_lam_L = lambda_L.size();
-  int num_lam_H = lambda_H.size();
   int num_lam_B = lambda_B.size();
   int num_rows = M.rows();
   int num_cols = M.cols();
-  int H_rows;
-  int H_cols;
-  if(to_add_ID == 1){
-    H_rows = X.cols()+num_rows;
-    H_cols = Z.cols()+num_cols;
-  }
-  else{
-    H_rows = X.cols();
-    H_cols = Z.cols();
-  }
-  List res(num_lam_L+num_lam_H+num_lam_B-1);
+
+  List res(num_lam_L+num_lam_B-1);
   NumericMatrix L_init = wrap(MatrixXd::Zero(num_rows,num_cols));
   NumericMatrix B_init = wrap(MatrixXd::Zero(num_rows,num_cols));
-  NumericMatrix H_init = wrap(MatrixXd::Zero(H_rows,H_cols));
-  NumericVector in_prod = wrap(VectorXd::Zero(num_rows*num_cols));
-  for (int k = 0; k<num_lam_B; k++){
-    List previous_pt = NNM_fit_H(M, C, B_init, X, Z, H_init, T, in_prod, in_prod_T, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, to_add_ID, lambda_L(0), lambda_H(0), lambda_B(k), niter, rel_tol, is_quiet);
+  for (int j = 0; j<num_lam_B; j++){
+    List previous_pt = NNM_fit_B(M, C, B_init, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, lambda_L(0), lambda_B(j), niter, rel_tol, is_quiet);
     NumericMatrix L_upd = previous_pt["L"];
-    NumericMatrix H_upd = previous_pt["H"];
-    NumericMatrix B_upd = previous_pt["B"];
-    res[k] = previous_pt;
-    L_init = L_upd;
-    B_init = B_upd;
-    NumericVector in_prod_upd = previous_pt["in_prod"];
-    in_prod = in_prod_upd;
-    u_init = previous_pt["u"];
-    v_init = previous_pt["v"];
-    H_init = H_upd;
-  }
-  for (int j = 0; j<num_lam_H; j++){
-    List previous_pt = NNM_fit_H(M, C, B_init, X, Z, H_init, T, in_prod, in_prod_T, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, to_add_ID, lambda_L(0), lambda_H(j), lambda_B(0), niter, rel_tol, is_quiet);
-    NumericMatrix L_upd = previous_pt["L"];
-    NumericMatrix H_upd = previous_pt["H"];
     NumericMatrix B_upd = previous_pt["B"];
     res[j] = previous_pt;
     L_init = L_upd;
     B_init = B_upd;
-    NumericVector in_prod_upd = previous_pt["in_prod"];
-    in_prod = in_prod_upd;
     u_init = previous_pt["u"];
     v_init = previous_pt["v"];
-    H_init = H_upd;
   }
   for (int i = 1; i<num_lam_L; i++){
-    List previous_pt = NNM_fit_H(M, C, B_init, X, Z, H_init, T, in_prod, in_prod_T, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, to_add_ID, lambda_L(i), lambda_H(num_lam_H-1), lambda_B(0), niter, rel_tol, is_quiet);
-    res[(i-1)+num_lam_H] = previous_pt;
+    List previous_pt = NNM_fit_B(M, C, B_init, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, lambda_L(i), lambda_B(num_lam_B-1), niter, rel_tol, is_quiet);
+    res[(i-1)+num_lam_B] = previous_pt;
     NumericMatrix L_upd = previous_pt["L"];
-    NumericMatrix H_upd = previous_pt["H"];
     NumericMatrix B_upd = previous_pt["B"];
-    NumericVector in_prod_upd = previous_pt["in_prod"];
-    in_prod = in_prod_upd;
     L_init = L_upd;
     B_init = B_upd;
     u_init = previous_pt["u"];
     v_init = previous_pt["v"];
-    H_init = H_upd;
   }
   return res;
 }
 
-List NNM_H_opt_path(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, bool to_estimate_u, bool to_estimate_v, bool to_add_ID, NumericVector lambda_L, NumericVector lambda_H, NumericVector lambda_B, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
-  // This is just a wrapper for NNM_with_uv_init_H_opt_path, which just passes the initialization to this function.
+List NNM_B_opt_path(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_estimate_u, bool to_estimate_v, NumericVector lambda_L, NumericVector lambda_B, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
+  // This is just a wrapper for NNM_with_uv_init_B_opt_path, which just passes the initialization to this function.
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
-  List tmp_uv = initialize_uv_H(M, C, X, Z, mask, W, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol);
+  List tmp_uv = initialize_uv_B(M, C, mask, W, to_estimate_u, to_estimate_v, niter, rel_tol);
   if(to_estimate_u == 1 || to_estimate_v ==1){
-    return NNM_with_uv_init_H_opt_path(M, C, X, Z, tmp_uv["T_mat"], tmp_uv["in_prod_T"], mask, W, tmp_uv["u"], tmp_uv["v"], to_estimate_u, to_estimate_v, to_add_ID, lambda_L, lambda_H, lambda_B, niter, rel_tol, is_quiet);
+    return NNM_with_uv_init_B_opt_path(M, C, mask, W, tmp_uv["u"], tmp_uv["v"], to_estimate_u, to_estimate_v, lambda_L, lambda_B, niter, rel_tol, is_quiet);
   }
   else{
-    return NNM_with_uv_init_H_opt_path(M, C, X, Z, tmp_uv["T_mat"], tmp_uv["in_prod_T"], mask, W, wrap(VectorXd::Zero(M_.rows())), wrap(VectorXd::Zero(M_.cols())), to_estimate_u, to_estimate_v, to_add_ID, lambda_L, lambda_H, lambda_B, niter, rel_tol, is_quiet);
+    return NNM_with_uv_init_B_opt_path(M, C, mask, W, wrap(VectorXd::Zero(M_.rows())), wrap(VectorXd::Zero(M_.cols())), to_estimate_u, to_estimate_v, lambda_L, lambda_B, niter, rel_tol, is_quiet);
   }
 }
 
@@ -1308,11 +1012,11 @@ List NNM_CV(NumericMatrix M, NumericMatrix mask, NumericMatrix W, bool to_estima
                       Named("lambda_L") = lambda_Ls);
 }
 
-List NNM_CV_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, bool to_estimate_u, bool to_estimate_v, bool to_add_ID, int num_lam_L, int num_lam_H, int num_lam_B, int niter, double rel_tol, double cv_ratio, int num_folds, bool is_quiet){
+List NNM_CV_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_estimate_u, bool to_estimate_v, int num_lam_L, int num_lam_B, int niter, double rel_tol, double cv_ratio, int num_folds, bool is_quiet){
 
   // This function is the core function of NNM. Basically, it creates num_folds number of folds and does cross-validation
-  // for choosing the best value of lambda_L and lambda_H, using data. Then, using the best model it fits to the
-  // entire training set and computes resulting L, H, u, and v. The output of this function basically
+  // for choosing the best value of lambda_L, using data. Then, using the best model it fits to the
+  // entire training set and computes resulting L, u, and v. The output of this function basically
   // contains all the information that we want from the algorithm.
 
   using Eigen::Map;
@@ -1321,45 +1025,34 @@ List NNM_CV_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z
   const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
   int num_rows = M_.rows();
   int num_cols = M_.cols();
-  List confgs = create_folds_H(M, C, X, Z, W, to_estimate_u, to_estimate_v, to_add_ID, mask, niter, rel_tol , cv_ratio, num_folds);
+  List confgs = create_folds_B(M, C, W, to_estimate_u, to_estimate_v, mask, niter, rel_tol, cv_ratio, num_folds);
   double max_lam_L=-1;
-  double max_lam_H=-1;
   double max_lam_B=-1;
   for(int k=0; k<num_folds; k++){
     List h = confgs[k];
     double lam_L_max = h["lambda_L_max"];
-    double lam_H_max = h["lambda_H_max"];
     double lam_B_max = h["lambda_B_max"];
     if(lam_L_max > max_lam_L){
       max_lam_L = lam_L_max;
-    }
-    if(lam_H_max > max_lam_H){
-      max_lam_H = lam_H_max;
     }
     if(lam_B_max > max_lam_B){
       max_lam_B = lam_B_max;
     }
   }
   NumericVector lambda_Ls_without_zero = logsp(log10(max_lam_L), log10(max_lam_L)-3, num_lam_L-1);
-  NumericVector lambda_Hs_without_zero = logsp(log10(max_lam_H), log10(max_lam_H)-3, num_lam_H-1);
   NumericVector lambda_Bs_without_zero = logsp(log10(max_lam_B), log10(max_lam_B)-3, num_lam_B-1);
   NumericVector lambda_Ls(num_lam_L);
   for(int i=0; i<num_lam_L-1; i++){
     lambda_Ls(i)= lambda_Ls_without_zero(i);
   }
   lambda_Ls(num_lam_L-1) = 0;
-  NumericVector lambda_Hs(num_lam_H);
-  for(int i=0; i<num_lam_H-1; i++){
-    lambda_Hs(i)= lambda_Hs_without_zero(i);
-  }
-  lambda_Hs(num_lam_H-1) = 0;
   NumericVector lambda_Bs(num_lam_B);
   for(int i=0; i<num_lam_B-1; i++){
     lambda_Bs(i)= lambda_Bs_without_zero(i);
   }
   lambda_Bs(num_lam_B-1) = 0;
 
-  MatrixXd MSE = MatrixXd::Zero(num_lam_L,num_lam_H*num_lam_B);
+  MatrixXd MSE = MatrixXd::Zero(num_lam_L,num_lam_B);
   for(int k=0; k<num_folds; k++){
     if(is_quiet == 0){
       std::cout << "Fold number " << k << " started" << std::endl;
@@ -1373,55 +1066,45 @@ List NNM_CV_H(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z
     NumericMatrix W_tr = wrap(W_tr_);
     MatrixXd mask_validation_ = mask_.array() * (MatrixXd::Constant(num_rows,num_cols,1.0)-mask_training_).array();
     NumericMatrix mask_validation = wrap(mask_validation_);
-    List train_configs = NNM_with_uv_init_H(M_tr, C, X, Z, h["T_mat"], h["in_prod_T"], mask_training, W_tr, h["u"], h["v"], to_estimate_u, to_estimate_v, to_add_ID, lambda_Ls, lambda_Hs, lambda_Bs, niter, rel_tol, is_quiet);
+    List train_configs = NNM_with_uv_init_B(M_tr, C, mask_training, W_tr, h["u"], h["v"], to_estimate_u, to_estimate_v, lambda_Ls, lambda_Bs, niter, rel_tol, is_quiet);
     for (int i = 0; i < num_lam_L; i++){
-      for (int j = 0; j < num_lam_H; j++){
-        for (int c = 0; c < num_lam_B; c++){
-          List this_config = train_configs[c*j*i];
-          NumericMatrix L_use = this_config["L"];
-          NumericVector u_use = this_config["u"];
-          NumericVector v_use = this_config["v"];
-          NumericMatrix H_use = this_config["H"];
-          NumericMatrix B_use = this_config["B"];
-          MSE(i,j+c) += std::pow(Compute_RMSE_H(M, C, B_use, X, Z, H_use, mask_validation, L_use, u_use, v_use, to_add_ID) ,2);
-      }  }
+      for (int j = 0; j < num_lam_B; j++){
+        List this_config = train_configs[j*i];
+        NumericMatrix L_use = this_config["L"];
+        NumericVector u_use = this_config["u"];
+        NumericVector v_use = this_config["v"];
+        NumericMatrix B_use = this_config["B"];
+        MSE(i,j) += std::pow(Compute_RMSE_B(M, C, B_use, mask_validation, L_use, u_use, v_use) ,2);
+      }  
     }
-  }
   MatrixXd Avg_MSE = MSE/num_folds;
   MatrixXd Avg_RMSE = Avg_MSE.array().sqrt();
   Index min_L_index;
-  Index min_H_index;
   Index min_B_index;
-  double minRMSE = Avg_RMSE.minCoeff(&min_L_index, &min_H_index); //RMSE doesn't capture B
+  double minRMSE = Avg_RMSE.minCoeff(&min_L_index, &min_B_index); 
   if(is_quiet == 0){
     std::cout << "Minimum RMSE achieved on validation set :" << minRMSE << std::endl;
     std::cout << "Optimum value of lambda_L : " << lambda_Ls(min_L_index) << std::endl;
-    std::cout << "Optimum value of lambda_H : " << lambda_Hs(min_H_index) << std::endl;
-    std::cout << "Optimum value of lambda_B : " << lambda_Hs(min_B_index) << std::endl;
-    std::cout << "Fitting to the test set using optimum lambda_L and lambda_H and lambda_B ..." << std::endl;
+    std::cout << "Optimum value of lambda_B : " << lambda_Bs(min_B_index) << std::endl;
+    std::cout << "Fitting to the test set using optimum lambda_L and lambda_B ..." << std::endl;
   }
   NumericVector lambda_Ls_n = lambda_Ls[lambda_Ls >= lambda_Ls(min_L_index)];
-  NumericVector lambda_Hs_n = lambda_Hs[lambda_Hs >= lambda_Hs(min_H_index)];
-  NumericVector lambda_Bs_n = lambda_Bs[lambda_Bs >= lambda_Hs(min_B_index)];
-  List final_config = NNM_H_opt_path(M, C, X, Z, mask, W, to_estimate_u, to_estimate_v, to_add_ID, lambda_Ls_n, lambda_Hs_n, lambda_Bs_n, niter, rel_tol, 1);
-  List z = final_config[min_L_index+min_H_index+min_B_index-1];
+  NumericVector lambda_Bs_n = lambda_Bs[lambda_Bs >= lambda_Bs(min_B_index)];
+  List final_config = NNM_B_opt_path(M, C, mask, W, to_estimate_u, to_estimate_v, lambda_Ls_n, lambda_Bs_n, niter, rel_tol, 1);
+  List z = final_config[min_L_index+min_B_index-1];
   MatrixXd B_fin = z["B"];
-  MatrixXd H_fin = z["H"];
   MatrixXd L_fin = z["L"];
   VectorXd u_fin = z["u"];
   VectorXd v_fin = z["v"];
   return List::create(Named("B") = B_fin,
-                      Named("H") = H_fin,
                       Named("L") = L_fin,
                       Named("u") = u_fin,
                       Named("v") = v_fin,
                       Named("Avg_RMSE") = Avg_RMSE,
                       Named("best_lambda_L") = lambda_Ls[min_L_index],
-                      Named("best_lambda_H") = lambda_Hs[min_H_index],
                       Named("best_lambda_B") = lambda_Bs[min_B_index],
-                      Named("min_RMSE") = minRMSE,
+                      Named("min_RMSE") = minRMSE, 
                       Named("lambda_L") = lambda_Ls,
-                      Named("lambda_H") = lambda_Hs,
                       Named("lambda_B") = lambda_Bs);
 }
 
@@ -1438,34 +1121,22 @@ bool mask_check(NumericMatrix mask){
   return(H.isZero(1e-5));
 }
 
-bool X_size_check(NumericMatrix M, NumericMatrix X){
-  const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  return (M_.rows() == X_.rows());
-}
-
-bool Z_size_check(NumericMatrix M, NumericMatrix Z){
-  const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
-  return (M_.cols() == Z_.rows());
-}
-
-bool W_size_check(NumericMatrix M, NumericMatrix W){
-  const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
-  const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
-  return (M_.cols() == W_.rows());
-}
-
 bool C_size_check(NumericMatrix M, NumericMatrix C){
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  return (M_.cols() == C_.rows());
+  return (M_.rows() == C_.rows());
 }
 
 bool mask_size_check(NumericMatrix M, NumericMatrix mask){
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
   return (M_.rows() == mask_.rows() && M_.cols() == mask_.cols());
+}
+
+bool mask_size_check_W(NumericMatrix W, NumericMatrix mask){
+  const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
+  const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
+  return (W_.rows() == mask_.rows() && W_.cols() == mask_.cols());
 }
 
 List normalize(NumericMatrix mat){
@@ -1482,40 +1153,16 @@ List normalize(NumericMatrix mat){
                       Named("col_norms") = col_norms);
 }
 
-NumericMatrix normalize_back_rows(NumericMatrix H, NumericVector row_H_scales){
-  const Map<MatrixXd> H_(as<Map<MatrixXd> >(H));
-  MatrixXd H_new = H_;
-  if(row_H_scales.size()){
-    for (int i=0; i < row_H_scales.size(); i++){
-      H_new.row(i) = H_new.row(i) / row_H_scales(i);
+NumericMatrix normalize_back_cols(NumericMatrix B, NumericVector col_B_scales){
+  const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
+  MatrixXd B_new = B_;
+  if(col_B_scales.size()){
+    for (int i=0; i < col_B_scales.size(); i++){
+      B_new.col(i) = B_new.col(i) / col_B_scales(i);
     }
   }
-  return wrap(H_new);
+  return wrap(B_new);
 }
-
-NumericMatrix normalize_back_cols(NumericMatrix H, NumericVector col_H_scales){
-  const Map<MatrixXd> H_(as<Map<MatrixXd> >(H));
-  MatrixXd H_new = H_;
-  if(col_H_scales.size()){
-    for (int i=0; i < col_H_scales.size(); i++){
-      H_new.col(i) = H_new.col(i) / col_H_scales(i);
-    }
-  }
-  return wrap(H_new);
-}
-
-NumericMatrix normalize_back_cols_C(NumericMatrix C, NumericVector col_C_scales){
-  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  MatrixXd C_new = C_;
-  if(col_C_scales.size()){
-    for (int i=0; i < col_C_scales.size(); i++){
-      C_new.col(i) = C_new.col(i) / col_C_scales(i);
-    }
-  }
-  return wrap(C_new);
-}
-
-
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1537,8 +1184,8 @@ int mcnnm_lam_range_check(NumericMatrix M, NumericMatrix mask, NumericMatrix W, 
     std::cerr << "Error: M matrix and mask matrix dimensions should match" << std::endl;
     return 0;
   }
-  if(mask_size_check(W,mask) == 0){
-    std::cerr << "Error: M matrix and mask matrix dimensions should match" << std::endl;
+  if(mask_size_check_W(W,mask) == 0){
+    std::cerr << "Error: W matrix and mask matrix dimensions should match" << std::endl;
     return 0;
   }
   return 1;
@@ -1557,10 +1204,8 @@ double mcnnm_lam_range(NumericMatrix M, NumericMatrix mask, NumericMatrix W, boo
 // EXPORT mcnnm_lam_range
 //////////////////////////////
 
-int mcnnm_wc_lam_range_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, bool to_add_ID = 1, int niter = 1000, double rel_tol = 1e-5){
+int mcnnm_wc_lam_range_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 1000, double rel_tol = 1e-5){
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
   if(mask_check(mask) == 0){
     std::cerr << "Error: The mask matrix should only include 0 (for missing) and 1 (for observed entries)" << std::endl;
     return 0;
@@ -1569,72 +1214,29 @@ int mcnnm_wc_lam_range_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, 
     std::cerr << "Error: M matrix and mask matrix dimensions should match" << std::endl;
     return 0;
   }
-  if(mask_size_check(W,mask) == 0){
+  if(mask_size_check_W(W,mask) == 0){
     std::cerr << "Error: W matrix and mask matrix dimensions should match" << std::endl;
-    return 0;
-  }
-  if(X_.rows() == 0 && to_add_ID == 0){
-    std::cerr << "Error: No need for training H as X is empty and identity matrix addition is disabled. Run mcnnm_lam_range instead" << std::endl;
-    return 0;
-  }
-
-  if(Z_.rows() == 0 && to_add_ID == 0){
-    std::cerr << "Error: No need for training H as Z is empty and identity matrix addition is disabled. Run mcnnm_lam_range instead" << std::endl;
-    return 0;
-  }
-
-  if(X_.rows() == 0 && Z_.rows() == 0){
-    std::cerr << "Error: No need for training H as X and Z are both empty. Run mcnnm_lam_range instead" << std::endl;
-    return 0;
-  }
-  if(X_.rows() > 0 && X_size_check(M,X) == 0){
-    std::cerr << "Error: Number of rows of X should match with the number of rows of M" << std::endl;
     return 0;
   }
   if(C_.rows() > 0 && C_size_check(M,C) == 0){
     std::cerr << "Error: Number of rows of C should match with the number of rows of M" << std::endl;
     return 0;
   }
-  if(X_.rows() > 0 && X_size_check(M,X) == 0){
-    std::cerr << "Error: Number of rows of X should match with the number of rows of M" << std::endl;
-    return 0;
-  }
-  if(Z_.rows() > 0 && Z_size_check(M,Z) == 0){
-    std::cerr << "Error: Number of rows of Z should match with the number of columns of M" << std::endl;
-    return 0;
-  }
   return 1;
 }
 // [[Rcpp::export]]
-List mcnnm_wc_lam_range(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, bool to_add_ID = 1, int niter = 1000, double rel_tol = 1e-5){
+List mcnnm_wc_lam_range(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 1000, double rel_tol = 1e-5){
 
-  int input_checks = mcnnm_wc_lam_range_check(M, C, X, Z, mask, W, to_normalize, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol);
+  int input_checks = mcnnm_wc_lam_range_check(M, C, mask, W, to_normalize, to_estimate_u, to_estimate_v, niter, rel_tol);
   if (input_checks == 0){
     throw std::invalid_argument("Invalid inputs ! Please modify");
   }
 
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
 
   NumericMatrix C_norm = C;
   NumericVector C_col_norms;
-  NumericMatrix X_norm = X;
-  NumericVector X_col_norms;
-  NumericMatrix Z_norm = Z;
-  NumericVector Z_col_norms;
-  if(to_normalize == 1 && X_.cols()>0){
-      List X_upd = normalize(X);
-      NumericMatrix X_tmp = X_upd["mat_norm"];
-      X_norm = X_tmp;
-      X_col_norms = X_upd["col_norms"];
-  }
-  if(to_normalize == 1 && Z_.cols()>0){
-      List Z_upd = normalize(Z);
-      NumericMatrix Z_tmp = Z_upd["mat_norm"];
-      Z_norm = Z_tmp;
-      Z_col_norms = Z_upd["col_norms"];
-  }
+
   if(to_normalize == 1 && C_.cols()>0){
       List C_upd = normalize(C);
       NumericMatrix C_tmp = C_upd["mat_norm"];
@@ -1642,9 +1244,8 @@ List mcnnm_wc_lam_range(NumericMatrix M, NumericMatrix C, NumericMatrix X, Numer
       C_col_norms = C_upd["col_norms"];
   }
 
-  List res= initialize_uv_H(M, C_norm, X_norm, Z_norm, mask, W, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol);
+  List res= initialize_uv_B(M, C_norm, mask, W, to_estimate_u, to_estimate_v, niter, rel_tol);
   return List::create(Named("lambda_L_max") = res["lambda_L_max"],
-                      Named("lambda_H_max") = res["lambda_H_max"],
                       Named("lambda_B_max") = res["lambda_B_max"]);
 }
 
@@ -1756,19 +1357,14 @@ List mcnnm_fit(NumericMatrix M, NumericMatrix mask, NumericMatrix W, double lamb
 // EXPORT mcnnm_wc
 ////////////////////////////////
 
-int mcnnm_wc_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, int num_lam_L = 30, int num_lam_H = 30, int num_lam_B = 30, NumericVector lambda_L = NumericVector::create(), NumericVector lambda_H = NumericVector::create(), NumericVector lambda_B = NumericVector::create(), bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, bool to_add_ID = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
+int mcnnm_wc_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, int num_lam_L = 30, int num_lam_B = 30, NumericVector lambda_L = NumericVector::create(),NumericVector lambda_B = NumericVector::create(), bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
   if(lambda_L.size() > 0){
     num_lam_L = lambda_L.size();
-  }
-  if(lambda_H.size() > 0){
-    num_lam_H = lambda_H.size();
   }
   if(lambda_B.size() > 0){
     num_lam_B = lambda_B.size();
   }
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
 
   if(mask_check(mask) == 0){
     std::cerr << "Error: The mask matrix should only include 0 (for missing) and 1 (for observed entries)" << std::endl;
@@ -1782,35 +1378,12 @@ int mcnnm_wc_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMat
     std::cerr << "Error: W matrix and mask matrix dimensions should match" << std::endl;
     return 0;
   }
-  if(X_.rows() == 0 && to_add_ID == 0){
-    std::cerr << "Error: No need for training H as X is empty and identity matrix addition is disabled. Run mcnnm_cv instead" << std::endl;
-    return 0;
-  }
-
-  if(Z_.rows() == 0 && to_add_ID == 0){
-    std::cerr << "Error: No need for training H as Z is empty and identity matrix addition is disabled. Run mcnnm_cv instead" << std::endl;
-    return 0;
-  }
-
-  if(X_.rows() == 0 && Z_.rows() == 0){
-    std::cerr << "Error: No need for training H as X and Z are both empty. Run mcnnm_cv instead" << std::endl;
-    return 0;
-  }
-
-  if(X_.rows() > 0 && X_size_check(M,X) == 0){
-    std::cerr << "Error: Number of rows of X should match with the number of rows of M" << std::endl;
-    return 0;
-  }
   if(C_.rows() > 0 && C_size_check(M,C) == 0){
     std::cerr << "Error: Number of rows of C should match with the number of rows of M" << std::endl;
     return 0;
   }
-  if(Z_.rows() > 0 && Z_size_check(M,Z) == 0){
-    std::cerr << "Error: Number of rows of Z should match with the number of columns of M" << std::endl;
-    return 0;
-  }
-  if(num_lam_L * num_lam_H * num_lam_B > 2500){
-    std::cerr << "Warning: The training might take very long. Please decrease number of lambda_Ls or lambda_Hs or lambda_Bs" << std::endl;
+  if(num_lam_L * num_lam_B > 2500){
+    std::cerr << "Warning: The training might take very long. Please decrease number of lambda_Ls or lambda_Bs" << std::endl;
   }
 
   if(rel_tol < 1e-10){
@@ -1819,63 +1392,31 @@ int mcnnm_wc_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMat
   return 1;
 }
 // [[Rcpp::export]]
-List mcnnm_wc(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, int num_lam_L = 30, int num_lam_H = 30, int num_lam_B = 30, NumericVector lambda_L = NumericVector::create(), NumericVector lambda_H = NumericVector::create(), NumericVector lambda_B = NumericVector::create(), bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, bool to_add_ID = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
+List mcnnm_wc(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, int num_lam_L = 30, int num_lam_B = 30, NumericVector lambda_L = NumericVector::create(), NumericVector lambda_B = NumericVector::create(), bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
 
-  int input_checks = mcnnm_wc_check(M, C, X, Z, mask, W, num_lam_L, num_lam_H, num_lam_B, lambda_L, lambda_H, lambda_B, to_normalize, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol, is_quiet);
+  int input_checks = mcnnm_wc_check(M, C, mask, W, num_lam_L, num_lam_B, lambda_L, lambda_B, to_normalize, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet);
   if (input_checks == 0){
     throw std::invalid_argument("Invalid inputs ! Please modify");
   }
 
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
 
   NumericMatrix C_norm = C;
   NumericVector C_col_norms;
-  NumericMatrix X_norm = X;
-  NumericVector X_col_norms;
-  NumericMatrix Z_norm = Z;
-  NumericVector Z_col_norms;
-  if(to_normalize == 1 && X_.cols()>0){
-      List X_upd = normalize(X);
-      NumericMatrix X_tmp = X_upd["mat_norm"];
-      X_norm = X_tmp;
-      X_col_norms = X_upd["col_norms"];
-  }
-  if(to_normalize == 1 && Z_.cols()>0){
-      List Z_upd = normalize(Z);
-      NumericMatrix Z_tmp = Z_upd["mat_norm"];
-      Z_norm = Z_tmp;
-      Z_col_norms = Z_upd["col_norms"];
-  }
+
   if(to_normalize == 1 && C_.cols()>0){
       List C_upd = normalize(C);
       NumericMatrix C_tmp = C_upd["mat_norm"];
       C_norm = C_tmp;
       C_col_norms = C_upd["col_norms"];
   }
-  List res = NNM_H(M, X_norm, Z_norm, C_norm, mask, W, num_lam_L, num_lam_H, num_lam_B, lambda_L, lambda_H, lambda_B, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol, is_quiet);
 
-  if(to_normalize == 1 && X_.cols()>0){
-    for(int i=0; i<res.size(); i++){
-      List tmp = res(i);
-      NumericMatrix H_renorm = normalize_back_rows(tmp["H"], X_col_norms);
-      tmp["H"] = H_renorm;
-      res(i) = tmp;
-    }
-  }
-  if(to_normalize == 1 && Z_.cols()>0){
-    for(int i=0; i<res.size(); i++){
-      List tmp = res(i);
-      NumericMatrix H_renorm = normalize_back_cols(tmp["H"], Z_col_norms);
-      tmp["H"] = H_renorm;
-      res(i) = tmp;
-    }
-  }
+  List res = NNM_B(M, C_norm, mask, W, num_lam_L, num_lam_B, lambda_L, lambda_B, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet);
+
   if(to_normalize == 1 && C_.cols()>0){
     for(int i=0; i<res.size(); i++){
       List tmp = res(i);
-      NumericMatrix B_renorm = normalize_back_cols_C(tmp["B"], C_col_norms);
+      NumericMatrix B_renorm = normalize_back_cols(tmp["B"], C_col_norms);
       tmp["B"] = B_renorm;
       res(i) = tmp;
     }
@@ -1887,10 +1428,8 @@ List mcnnm_wc(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z
 // EXPORT mcnnm_wc
 ////////////////////////////////
 
-int mcnnm_wc_fit_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, double lambda_L, double lambda_H, double lambda_B, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, bool to_add_ID = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
+int mcnnm_wc_fit_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, double lambda_L, double lambda_B, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
   if(mask_check(mask) == 0){
     std::cerr << "Error: The mask matrix should only include 0 (for missing) and 1 (for observed entries)" << std::endl;
     return 0;
@@ -1907,82 +1446,38 @@ int mcnnm_wc_fit_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, Numeri
     std::cerr << "Error: C matrix and mask matrix dimensions should match" << std::endl;
     return 0;
   }
-  if(X_.rows() == 0 && to_add_ID == 0){
-    std::cerr << "Error: No need for training H as X is empty and identity matrix addition is disabled. Run mcnnm_fit instead" << std::endl;
-    return 0;
-  }
-
-  if(Z_.rows() == 0 && to_add_ID == 0){
-    std::cerr << "Error: No need for training H as Z is empty and identity matrix addition is disabled. Run mcnnm_fit instead" << std::endl;
-    return 0;
-  }
-
-  if(X_.rows() == 0 && Z_.rows() == 0){
-    std::cerr << "Error: No need for training H as X and Z are both empty. Run mcnnm_fit instead" << std::endl;
-    return 0;
-  }
-
   if(C_.rows() > 0 && C_size_check(M,C) == 0){
     std::cerr << "Error: Number of rows of C should match with the number of rows of M" << std::endl;
     return 0;
   }
-
-  if(X_.rows() > 0 && X_size_check(M,X) == 0){
-    std::cerr << "Error: Number of rows of X should match with the number of rows of M" << std::endl;
-    return 0;
-  }
-  if(Z_.rows() > 0 && Z_size_check(M,Z) == 0){
-    std::cerr << "Error: Number of rows of Z should match with the number of columns of M" << std::endl;
-    return 0;
-  }
-
   if(rel_tol < 1e-10){
     std::cerr << "Warning: The chosen value for relative improvement is very small. Training might take longer" << std::endl;
   }
   return 1;
 }
 // [[Rcpp::export]]
-List mcnnm_wc_fit(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, double lambda_L, double lambda_H, double lambda_B, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, bool to_add_ID = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
-  int input_checks = mcnnm_wc_fit_check(M, X, C, Z, mask, W, lambda_L, lambda_H, lambda_B, to_normalize, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol, is_quiet);
+List mcnnm_wc_fit(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, double lambda_L, double lambda_B, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
+  int input_checks = mcnnm_wc_fit_check(M, C, mask, W, lambda_L, lambda_B, to_normalize, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet);
   if (input_checks == 0){
     throw std::invalid_argument("Invalid inputs ! Please modify");
   }
 
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
 
   NumericMatrix C_norm = C;
   NumericVector C_col_norms;
-  NumericMatrix X_norm = X;
-  NumericVector X_col_norms;
-  NumericMatrix Z_norm = Z;
-  NumericVector Z_col_norms;
+
   if(to_normalize == 1 && C_.cols()>0){
       List C_upd = normalize(C);
       NumericMatrix C_tmp = C_upd["mat_norm"];
       C_norm = C_tmp;
       C_col_norms = C_upd["col_norms"];
   }
-  if(to_normalize == 1 && X_.cols()>0){
-      List X_upd = normalize(X);
-      NumericMatrix X_tmp = X_upd["mat_norm"];
-      X_norm = X_tmp;
-      X_col_norms = X_upd["col_norms"];
-  }
-  if(to_normalize == 1 && Z_.cols()>0){
-      List Z_upd = normalize(Z);
-      NumericMatrix Z_tmp = Z_upd["mat_norm"];
-      Z_norm = Z_tmp;
-      Z_col_norms = Z_upd["col_norms"];
-  }
 
-  List ranges = mcnnm_wc_lam_range(M, C_norm, X_norm, Z_norm, mask, W, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol);
+  List ranges = mcnnm_wc_lam_range(M, C_norm, mask, W, to_estimate_u, to_estimate_v, niter, rel_tol);
   double max_lam_L = ranges["lambda_L_max"];
-  double max_lam_H = ranges["lambda_H_max"];
   double max_lam_B = ranges["lambda_B_max"];
   NumericVector lambda_Ls_fin;
-  NumericVector lambda_Hs_fin;
   NumericVector lambda_Bs_fin;
   if(lambda_L >= max_lam_L){
     NumericVector lambda_Ls(1);
@@ -2006,27 +1501,6 @@ List mcnnm_wc_fit(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatr
     lambda_Ls_(num_lam_L_n) = lambda_L;
     lambda_Ls_fin = lambda_Ls_;
   }
-  if(lambda_H >= max_lam_H){
-    NumericVector lambda_Hs(1);
-    lambda_Hs(0) = lambda_H;
-    lambda_Hs_fin = lambda_Hs;
-  } else{
-    int num_lam_H = 30;
-    NumericVector lambda_Hs(num_lam_H);
-    NumericVector lambda_Hs_without_zero = logsp(log10(max_lam_H), log10(max_lam_H)-3, num_lam_H-1);
-    for(int i=0; i<num_lam_H-1; i++){
-      lambda_Hs(i)= lambda_Hs_without_zero(i);
-    }
-    lambda_Hs(num_lam_H-1) = 0;
-    NumericVector lambda_Hs_n = lambda_Hs[lambda_Hs >= lambda_H];
-    int num_lam_H_n = lambda_Hs_n.size();
-    NumericVector lambda_Hs_(num_lam_H_n+1);
-    for(int i=0; i<num_lam_H_n; i++){
-      lambda_Hs_(i)= lambda_Hs_n(i);
-    }
-    lambda_Hs_(num_lam_H_n) = lambda_H;
-    lambda_Hs_fin = lambda_Hs_;
-  }
   if(lambda_B >= max_lam_B){
     NumericVector lambda_Bs(1);
     lambda_Bs(0) = lambda_B;
@@ -2048,32 +1522,20 @@ List mcnnm_wc_fit(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatr
     lambda_Bs_(num_lam_B_n) = lambda_B;
     lambda_Bs_fin = lambda_Bs_;
   }
-  List Q = NNM_H_opt_path(M, C_norm, X_norm, Z_norm, mask, W, to_estimate_u, to_estimate_v, to_add_ID, lambda_Ls_fin, lambda_Hs_fin, lambda_Bs_fin, niter, rel_tol, is_quiet);
+  List Q = NNM_B_opt_path(M, C_norm, mask, W, to_estimate_u, to_estimate_v, lambda_Ls_fin, lambda_Bs_fin, niter, rel_tol, is_quiet);
   List final_config = Q[Q.size()-1];
 
-  if(to_normalize == 1 && X_.cols()>0){
-    List tmp = final_config;
-    NumericMatrix H_renorm = normalize_back_rows(final_config["H"], X_col_norms);
-    final_config["H"] = H_renorm;
-  }
-  if(to_normalize == 1 && Z_.cols()>0){
-    List tmp = final_config;
-    NumericMatrix H_renorm = normalize_back_cols(final_config["H"], Z_col_norms);
-    final_config ["H"]= H_renorm;
-  }
   if(to_normalize == 1 && C_.cols()>0){
     List tmp = final_config;
-    NumericMatrix B_renorm = normalize_back_cols_C(final_config["B"], C_col_norms);
+    NumericMatrix B_renorm = normalize_back_cols(final_config["B"], C_col_norms);
     final_config ["B"]= B_renorm;
   }
 
-  return List::create(Named("H") = final_config["H"],
-                      Named("B") = final_config["B"],
+  return List::create(Named("B") = final_config["B"],
                       Named("L") = final_config["L"],
                       Named("u") = final_config["u"],
                       Named("v") = final_config["v"],
                       Named("lambda_L") = lambda_L,
-                      Named("lambda_H") = lambda_H,
                       Named("lambda_B") = lambda_B);
 }
 
@@ -2127,10 +1589,8 @@ List mcnnm_cv(NumericMatrix M, NumericMatrix mask, NumericMatrix W, bool to_esti
 // EXPORT mcnnm_wc_cv
 /////////////////////////////////
 
-int mcnnm_wc_cv_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, bool to_normalize, bool to_estimate_u, bool to_estimate_v, bool to_add_ID, int num_lam_L, int num_lam_H, int num_lam_B, int niter, double rel_tol, double cv_ratio, int num_folds, bool is_quiet){
+int mcnnm_wc_cv_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_normalize, bool to_estimate_u, bool to_estimate_v, int num_lam_L, int num_lam_B, int niter, double rel_tol, double cv_ratio, int num_folds, bool is_quiet){
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));  
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
   if(mask_check(mask) == 0){
     std::cerr << "Error: The mask matrix should only include 0 (for missing) and 1 (for observed entries)" << std::endl;
     return 0;
@@ -2139,40 +1599,16 @@ int mcnnm_wc_cv_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, Numeric
     std::cerr << "Error: M matrix and mask matrix dimensions should match" << std::endl;
     return 0;
   }
-  if(mask_size_check(W,mask) == 0){
-    std::cerr << "Error: C matrix and mask matrix dimensions should match" << std::endl;
-    return 0;
-  }
-
-  if(X_.rows() == 0 && to_add_ID == 0){
-    std::cerr << "Error: No need for training H as X is empty and identity matrix addition is disabled. Run MCNNM_cv instead" << std::endl;
-    return 0;
-  }
-
-  if(Z_.rows() == 0 && to_add_ID == 0){
-    std::cerr << "Error: No need for training H as Z is empty and identity matrix addition is disabled. Run MCNNM_cv instead" << std::endl;
-    return 0;
-  }
-
-  if(X_.rows() == 0 && Z_.rows() == 0 && C_.rows() == 0){
-    std::cerr << "Error: No need for training H as X and Z are both empty. Run MCNNM_cv instead" << std::endl;
-    return 0;
-  }
-
-  if(X_.rows() > 0 && X_size_check(M,X) == 0){
-    std::cerr << "Error: Number of rows of X should match with the number of rows of M" << std::endl;
-    return 0;
-  }
-  if(Z_.rows() > 0 && Z_size_check(M,Z) == 0){
-    std::cerr << "Error: Number of rows of Z should match with the number of columns of M" << std::endl;
+  if(mask_size_check_W(W,mask) == 0){
+    std::cerr << "Error: W matrix and mask matrix dimensions should match" << std::endl;
     return 0;
   }
   if(C_.rows() > 0 && C_size_check(M,C) == 0){
-    std::cerr << "Error: Number of rows of C should match with the number of columns of M" << std::endl;
+    std::cerr << "Error: Number of rows of C should match with the number of rows of M" << std::endl;
     return 0;
   }
-  if(num_lam_L * num_lam_H * num_lam_B > 2500){
-    std::cerr << "Warning: The cross-validation might take very long. Please decrease number of lambda_Ls or lambda_Hs or lambda_Bs" << std::endl;
+  if(num_lam_L * num_lam_B > 2500){
+    std::cerr << "Warning: The cross-validation might take very long. Please decrease number of lambda_Ls or lambda_Bs" << std::endl;
   }
   if(cv_ratio < 0.1 || cv_ratio > 0.9){
     std::cerr << "Error: The cross-validation ratio should be between 10 to 90 percent for getting accurate results. Please modify it" << std::endl;
@@ -2190,58 +1626,29 @@ int mcnnm_wc_cv_check(NumericMatrix M, NumericMatrix C, NumericMatrix X, Numeric
 }
 
 // [[Rcpp::export]]
-List mcnnm_wc_cv(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, bool to_add_ID = 1, int num_lam_L = 30, int num_lam_H = 30, int num_lam_B = 30, int niter = 100, double rel_tol = 1e-5, double cv_ratio = 0.8, int num_folds = 1, bool is_quiet = 1){
+List mcnnm_wc_cv(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1,  int num_lam_L = 30, int num_lam_B = 30, int niter = 100, double rel_tol = 1e-5, double cv_ratio = 0.8, int num_folds = 1, bool is_quiet = 1){
   List res;
-  int input_checks = mcnnm_wc_cv_check(M, C, X, Z, mask, W, to_normalize, to_estimate_u, to_estimate_v, to_add_ID, num_lam_L, num_lam_H, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet);
+  int input_checks = mcnnm_wc_cv_check(M, C, mask, W, to_normalize, to_estimate_u, to_estimate_v, num_lam_L, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet);
   if (input_checks == 0){
     throw std::invalid_argument("Invalid inputs ! Please modify");
   }
 
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  const Map<MatrixXd> X_(as<Map<MatrixXd> >(X));
-  const Map<MatrixXd> Z_(as<Map<MatrixXd> >(Z));
 
   NumericMatrix C_norm = C;
   NumericVector C_col_norms;
-  NumericMatrix X_norm = X;
-  NumericVector X_col_norms;
-  NumericMatrix Z_norm = Z;
-  NumericVector Z_col_norms;
+
   if(to_normalize == 1 && C_.cols()>0){
       List C_upd = normalize(C);
       NumericMatrix C_tmp = C_upd["mat_norm"];
       C_norm = C_tmp;
       C_col_norms = C_upd["col_norms"];
   }
-  if(to_normalize == 1 && X_.cols()>0){
-      List X_upd = normalize(X);
-      NumericMatrix X_tmp = X_upd["mat_norm"];
-      X_norm = X_tmp;
-      X_col_norms = X_upd["col_norms"];
-  }
-  if(to_normalize == 1 && Z_.cols()>0){
-      List Z_upd = normalize(Z);
-      NumericMatrix Z_tmp = Z_upd["mat_norm"];
-      Z_norm = Z_tmp;
-      Z_col_norms = Z_upd["col_norms"];
-  }
 
-  res = NNM_CV_H(M, C_norm, X_norm, Z_norm, mask, W, to_estimate_u, to_estimate_v, to_add_ID, num_lam_L, num_lam_H, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet);
-  if(to_normalize == 1 && X_.cols()>0){
-    List tmp = res;
-    NumericMatrix H_renorm = normalize_back_rows(tmp["H"], X_col_norms);
-    tmp["H"] = H_renorm;
-    res = tmp;
-  }
-  if(to_normalize == 1 && Z_.cols()>0){
-    List tmp = res;
-    NumericMatrix H_renorm = normalize_back_cols(tmp["H"], Z_col_norms);
-    tmp["H"] = H_renorm;
-    res = tmp;
-  }
+  res = NNM_CV_B(M, C_norm, mask, W, to_estimate_u, to_estimate_v, num_lam_L, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet);
   if(to_normalize == 1 && C_.cols()>0){
     List tmp = res;
-    NumericMatrix B_renorm = normalize_back_cols_C(tmp["B"], C_col_norms);
+    NumericMatrix B_renorm = normalize_back_cols(tmp["B"], C_col_norms);
     tmp["B"] = B_renorm;
     res = tmp;
   }  

@@ -24,24 +24,21 @@ BEGIN_RCPP
 END_RCPP
 }
 // mcnnm_wc_lam_range
-List mcnnm_wc_lam_range(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, bool to_normalize, bool to_estimate_u, bool to_estimate_v, bool to_add_ID, int niter, double rel_tol);
-RcppExport SEXP _MCPanel_mcnnm_wc_lam_range(SEXP MSEXP, SEXP CSEXP, SEXP XSEXP, SEXP ZSEXP, SEXP maskSEXP, SEXP WSEXP, SEXP to_normalizeSEXP, SEXP to_estimate_uSEXP, SEXP to_estimate_vSEXP, SEXP to_add_IDSEXP, SEXP niterSEXP, SEXP rel_tolSEXP) {
+List mcnnm_wc_lam_range(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_normalize, bool to_estimate_u, bool to_estimate_v, int niter, double rel_tol);
+RcppExport SEXP _MCPanel_mcnnm_wc_lam_range(SEXP MSEXP, SEXP CSEXP, SEXP maskSEXP, SEXP WSEXP, SEXP to_normalizeSEXP, SEXP to_estimate_uSEXP, SEXP to_estimate_vSEXP, SEXP niterSEXP, SEXP rel_tolSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericMatrix >::type M(MSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type C(CSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type Z(ZSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type mask(maskSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type W(WSEXP);
     Rcpp::traits::input_parameter< bool >::type to_normalize(to_normalizeSEXP);
     Rcpp::traits::input_parameter< bool >::type to_estimate_u(to_estimate_uSEXP);
     Rcpp::traits::input_parameter< bool >::type to_estimate_v(to_estimate_vSEXP);
-    Rcpp::traits::input_parameter< bool >::type to_add_ID(to_add_IDSEXP);
     Rcpp::traits::input_parameter< int >::type niter(niterSEXP);
     Rcpp::traits::input_parameter< double >::type rel_tol(rel_tolSEXP);
-    rcpp_result_gen = Rcpp::wrap(mcnnm_wc_lam_range(M, C, X, Z, mask, W, to_normalize, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol));
+    rcpp_result_gen = Rcpp::wrap(mcnnm_wc_lam_range(M, C, mask, W, to_normalize, to_estimate_u, to_estimate_v, niter, rel_tol));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -85,57 +82,48 @@ BEGIN_RCPP
 END_RCPP
 }
 // mcnnm_wc
-List mcnnm_wc(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, int num_lam_L, int num_lam_H, int num_lam_B, NumericVector lambda_L, NumericVector lambda_H, NumericVector lambda_B, bool to_normalize, bool to_estimate_u, bool to_estimate_v, bool to_add_ID, int niter, double rel_tol, bool is_quiet);
-RcppExport SEXP _MCPanel_mcnnm_wc(SEXP MSEXP, SEXP CSEXP, SEXP XSEXP, SEXP ZSEXP, SEXP maskSEXP, SEXP WSEXP, SEXP num_lam_LSEXP, SEXP num_lam_HSEXP, SEXP num_lam_BSEXP, SEXP lambda_LSEXP, SEXP lambda_HSEXP, SEXP lambda_BSEXP, SEXP to_normalizeSEXP, SEXP to_estimate_uSEXP, SEXP to_estimate_vSEXP, SEXP to_add_IDSEXP, SEXP niterSEXP, SEXP rel_tolSEXP, SEXP is_quietSEXP) {
+List mcnnm_wc(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, int num_lam_L, int num_lam_B, NumericVector lambda_L, NumericVector lambda_B, bool to_normalize, bool to_estimate_u, bool to_estimate_v, int niter, double rel_tol, bool is_quiet);
+RcppExport SEXP _MCPanel_mcnnm_wc(SEXP MSEXP, SEXP CSEXP, SEXP maskSEXP, SEXP WSEXP, SEXP num_lam_LSEXP, SEXP num_lam_BSEXP, SEXP lambda_LSEXP, SEXP lambda_BSEXP, SEXP to_normalizeSEXP, SEXP to_estimate_uSEXP, SEXP to_estimate_vSEXP, SEXP niterSEXP, SEXP rel_tolSEXP, SEXP is_quietSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericMatrix >::type M(MSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type C(XSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type C(CSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type mask(maskSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type W(WSEXP);
     Rcpp::traits::input_parameter< int >::type num_lam_L(num_lam_LSEXP);
-    Rcpp::traits::input_parameter< int >::type num_lam_H(num_lam_HSEXP);
     Rcpp::traits::input_parameter< int >::type num_lam_B(num_lam_BSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type lambda_L(lambda_LSEXP);
-    Rcpp::traits::input_parameter< NumericVector >::type lambda_H(lambda_HSEXP);
     Rcpp::traits::input_parameter< NumericVector >::type lambda_B(lambda_BSEXP);
     Rcpp::traits::input_parameter< bool >::type to_normalize(to_normalizeSEXP);
     Rcpp::traits::input_parameter< bool >::type to_estimate_u(to_estimate_uSEXP);
     Rcpp::traits::input_parameter< bool >::type to_estimate_v(to_estimate_vSEXP);
-    Rcpp::traits::input_parameter< bool >::type to_add_ID(to_add_IDSEXP);
     Rcpp::traits::input_parameter< int >::type niter(niterSEXP);
     Rcpp::traits::input_parameter< double >::type rel_tol(rel_tolSEXP);
     Rcpp::traits::input_parameter< bool >::type is_quiet(is_quietSEXP);
-    rcpp_result_gen = Rcpp::wrap(mcnnm_wc(M, C, X, Z, mask, W, num_lam_L, num_lam_H, num_lam_B, lambda_L, lambda_H, lambda_B, to_normalize, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol, is_quiet));
+    rcpp_result_gen = Rcpp::wrap(mcnnm_wc(M, C, mask, W, num_lam_L, num_lam_B, lambda_L, lambda_B, to_normalize, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet));
     return rcpp_result_gen;
 END_RCPP
 }
 // mcnnm_wc_fit
-List mcnnm_wc_fit(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, double lambda_L, double lambda_H, double lambda_B, bool to_normalize, bool to_estimate_u, bool to_estimate_v, bool to_add_ID, int niter, double rel_tol, bool is_quiet);
-RcppExport SEXP _MCPanel_mcnnm_wc_fit(SEXP MSEXP, SEXP CSEXP, SEXP XSEXP, SEXP ZSEXP, SEXP maskSEXP, SEXP WSEXP, SEXP lambda_LSEXP, SEXP lambda_HSEXP, SEXP lambda_BSEXP, SEXP to_normalizeSEXP, SEXP to_estimate_uSEXP, SEXP to_estimate_vSEXP, SEXP to_add_IDSEXP, SEXP niterSEXP, SEXP rel_tolSEXP, SEXP is_quietSEXP) {
+List mcnnm_wc_fit(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, double lambda_L, double lambda_B, bool to_normalize, bool to_estimate_u, bool to_estimate_v, int niter, double rel_tol, bool is_quiet);
+RcppExport SEXP _MCPanel_mcnnm_wc_fit(SEXP MSEXP, SEXP CSEXP, SEXP maskSEXP, SEXP WSEXP, SEXP lambda_LSEXP, SEXP lambda_BSEXP, SEXP to_normalizeSEXP, SEXP to_estimate_uSEXP, SEXP to_estimate_vSEXP, SEXP niterSEXP, SEXP rel_tolSEXP, SEXP is_quietSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericMatrix >::type M(MSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type C(XSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type C(CSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type mask(maskSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type W(WSEXP);
     Rcpp::traits::input_parameter< double >::type lambda_L(lambda_LSEXP);
-    Rcpp::traits::input_parameter< double >::type lambda_H(lambda_HSEXP);
     Rcpp::traits::input_parameter< double >::type lambda_B(lambda_BSEXP);
     Rcpp::traits::input_parameter< bool >::type to_normalize(to_normalizeSEXP);
     Rcpp::traits::input_parameter< bool >::type to_estimate_u(to_estimate_uSEXP);
     Rcpp::traits::input_parameter< bool >::type to_estimate_v(to_estimate_vSEXP);
-    Rcpp::traits::input_parameter< bool >::type to_add_ID(to_add_IDSEXP);
     Rcpp::traits::input_parameter< int >::type niter(niterSEXP);
     Rcpp::traits::input_parameter< double >::type rel_tol(rel_tolSEXP);
     Rcpp::traits::input_parameter< bool >::type is_quiet(is_quietSEXP);
-    rcpp_result_gen = Rcpp::wrap(mcnnm_wc_fit(M, C, X, Z, mask, W, lambda_L, lambda_H, lambda_B, to_normalize, to_estimate_u, to_estimate_v, to_add_ID, niter, rel_tol, is_quiet));
+    rcpp_result_gen = Rcpp::wrap(mcnnm_wc_fit(M, C, mask, W, lambda_L, lambda_B, to_normalize, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -161,47 +149,26 @@ BEGIN_RCPP
 END_RCPP
 }
 // mcnnm_wc_cv
-List mcnnm_wc_cv(NumericMatrix M, NumericMatrix C, NumericMatrix X, NumericMatrix Z, NumericMatrix mask, NumericMatrix W, bool to_normalize, bool to_estimate_u, bool to_estimate_v, bool to_add_ID, int num_lam_L, int num_lam_H, int num_lam_B, int niter, double rel_tol, double cv_ratio, int num_folds, bool is_quiet);
-RcppExport SEXP _MCPanel_mcnnm_wc_cv(SEXP MSEXP, SEXP CSEXP, SEXP XSEXP, SEXP ZSEXP, SEXP maskSEXP, SEXP WSEXP, SEXP to_normalizeSEXP, SEXP to_estimate_uSEXP, SEXP to_estimate_vSEXP, SEXP to_add_IDSEXP, SEXP num_lam_LSEXP, SEXP num_lam_HSEXP, SEXP num_lam_BSEXP, SEXP niterSEXP, SEXP rel_tolSEXP, SEXP cv_ratioSEXP, SEXP num_foldsSEXP, SEXP is_quietSEXP) {
+List mcnnm_wc_cv(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_normalize, bool to_estimate_u, bool to_estimate_v, int num_lam_L, int num_lam_B, int niter, double rel_tol, double cv_ratio, int num_folds, bool is_quiet);
+RcppExport SEXP _MCPanel_mcnnm_wc_cv(SEXP MSEXP, SEXP CSEXP, SEXP maskSEXP, SEXP WSEXP, SEXP to_normalizeSEXP, SEXP to_estimate_uSEXP, SEXP to_estimate_vSEXP, SEXP num_lam_LSEXP, SEXP num_lam_BSEXP, SEXP niterSEXP, SEXP rel_tolSEXP, SEXP cv_ratioSEXP, SEXP num_foldsSEXP, SEXP is_quietSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< NumericMatrix >::type M(MSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type C(MSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type X(XSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type Z(ZSEXP);
+    Rcpp::traits::input_parameter< NumericMatrix >::type C(CSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type mask(maskSEXP);
     Rcpp::traits::input_parameter< NumericMatrix >::type W(WSEXP);
     Rcpp::traits::input_parameter< bool >::type to_normalize(to_normalizeSEXP);
     Rcpp::traits::input_parameter< bool >::type to_estimate_u(to_estimate_uSEXP);
     Rcpp::traits::input_parameter< bool >::type to_estimate_v(to_estimate_vSEXP);
-    Rcpp::traits::input_parameter< bool >::type to_add_ID(to_add_IDSEXP);
     Rcpp::traits::input_parameter< int >::type num_lam_L(num_lam_LSEXP);
-    Rcpp::traits::input_parameter< int >::type num_lam_H(num_lam_HSEXP);
     Rcpp::traits::input_parameter< int >::type num_lam_B(num_lam_BSEXP);
     Rcpp::traits::input_parameter< int >::type niter(niterSEXP);
     Rcpp::traits::input_parameter< double >::type rel_tol(rel_tolSEXP);
     Rcpp::traits::input_parameter< double >::type cv_ratio(cv_ratioSEXP);
     Rcpp::traits::input_parameter< int >::type num_folds(num_foldsSEXP);
     Rcpp::traits::input_parameter< bool >::type is_quiet(is_quietSEXP);
-    rcpp_result_gen = Rcpp::wrap(mcnnm_wc_cv(M, C, X, Z, mask, W, to_normalize, to_estimate_u, to_estimate_v, to_add_ID, num_lam_L, num_lam_H, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet));
+    rcpp_result_gen = Rcpp::wrap(mcnnm_wc_cv(M, C, mask, W, to_normalize, to_estimate_u, to_estimate_v, num_lam_L, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet));
     return rcpp_result_gen;
 END_RCPP
-}
-
-static const R_CallMethodDef CallEntries[] = {
-    {"_MCPanel_mcnnm_lam_range", (DL_FUNC) &_MCPanel_mcnnm_lam_range, 7},
-    {"_MCPanel_mcnnm_wc_lam_range", (DL_FUNC) &_MCPanel_mcnnm_wc_lam_range, 12},
-    {"_MCPanel_mcnnm", (DL_FUNC) &_MCPanel_mcnnm, 10},
-    {"_MCPanel_mcnnm_fit", (DL_FUNC) &_MCPanel_mcnnm_fit, 9},
-    {"_MCPanel_mcnnm_wc", (DL_FUNC) &_MCPanel_mcnnm_wc, 19},
-    {"_MCPanel_mcnnm_wc_fit", (DL_FUNC) &_MCPanel_mcnnm_wc_fit, 16},
-    {"_MCPanel_mcnnm_cv", (DL_FUNC) &_MCPanel_mcnnm_cv, 11},
-    {"_MCPanel_mcnnm_wc_cv", (DL_FUNC) &_MCPanel_mcnnm_wc_cv, 18},
-    {NULL, NULL, 0}
-};
-
-RcppExport void R_init_MCPanel(DllInfo *dll) {
-    R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
-    R_useDynamicSymbols(dll, FALSE);
 }
