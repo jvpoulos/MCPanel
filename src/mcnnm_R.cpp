@@ -81,7 +81,7 @@ NumericMatrix ComputeMatrix_B(NumericMatrix L, NumericMatrix C, NumericMatrix B,
   int num_rows = L_.rows();
   int num_cols = L_.cols();
 
-  res_ = L_ + C_ * B_ + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
+  MatrixXd res_ = L_ + C_ * B_ + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
 
   return wrap(res_);
 }
@@ -1025,7 +1025,8 @@ List NNM_CV_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatri
   const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
   int num_rows = M_.rows();
   int num_cols = M_.cols();
-  List confgs = create_folds_B(M, C, W, to_estimate_u, to_estimate_v, mask, niter, rel_tol, cv_ratio, num_folds);
+  List confgs = create_folds_B(M, C, B, to_estimate_u, to_estimate_v, mask, W, niter, rel_tol, cv_ratio, num_folds);
+
   double max_lam_L=-1;
   double max_lam_B=-1;
   for(int k=0; k<num_folds; k++){
@@ -1051,7 +1052,6 @@ List NNM_CV_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatri
     lambda_Bs(i)= lambda_Bs_without_zero(i);
   }
   lambda_Bs(num_lam_B-1) = 0;
-
   MatrixXd MSE = MatrixXd::Zero(num_lam_L,num_lam_B);
   for(int k=0; k<num_folds; k++){
     if(is_quiet == 0){
@@ -1069,7 +1069,7 @@ List NNM_CV_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatri
     List train_configs = NNM_with_uv_init_B(M_tr, C, mask_training, W_tr, h["u"], h["v"], to_estimate_u, to_estimate_v, lambda_Ls, lambda_Bs, niter, rel_tol, is_quiet);
     for (int i = 0; i < num_lam_L; i++){
       for (int j = 0; j < num_lam_B; j++){
-        List this_config = train_configs[j*i];
+        List this_config = train_configs[j*num_lam_L+i];
         NumericMatrix L_use = this_config["L"];
         NumericVector u_use = this_config["u"];
         NumericVector v_use = this_config["v"];
@@ -1077,6 +1077,7 @@ List NNM_CV_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatri
         MSE(i,j) += std::pow(Compute_RMSE_B(M, C, B_use, mask_validation, L_use, u_use, v_use) ,2);
       }  
     }
+  }
   MatrixXd Avg_MSE = MSE/num_folds;
   MatrixXd Avg_RMSE = Avg_MSE.array().sqrt();
   Index min_L_index;
