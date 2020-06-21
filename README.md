@@ -1,7 +1,11 @@
-# MCPanel
-Matrix Completion Methods for Causal Panel Data Models
+# MCPanel+
 
-The __MCPanel__ package provides functions to fit a low-rank model to a partially observed matrix. 
+This repo is forked from [MCPanel](https://github.com/susanathey/MCPanel/). The model is described in the paper [Matrix Completion Methods for Causal Panel Data Models](http://arxiv.org/abs/1710.10251) by Athey et al. 
+
+The code in this fork allows for unit-time specific covariates in the form of a *N x T* matrix **C** in lieu of the vectors of unit-specific and time-specific covariates in the parent repo. 
+
+The code also allows for a *N x T* matrix **W** used to weight the loss function, as described in Sec. 8.3 of the Athey et al. paper. 
+
 
 Prerequsites
 ------
@@ -22,15 +26,25 @@ Example usage:
 
 ```R
 library(MCPanel)
-estimated_obj <- mcnnm_cv(M, mask, W, to_estimate_u = 0, to_estimate_v = 0, num_lam_L = 40)
-                  
-best_lam_L <- estimated_obj$best_lambda
-estimated_mat <- estimated_obj$L
 
+T <- 5 # No. time periods
+N <- 5 # No. units
+
+Y <- replicate(T,rnorm(N)) # simulated observed outcomes
+
+treat_mat <- simul_adapt(M = Y, N_t = 2, T0= 3, treat_indices=c(4,5))
+
+Y_obs <- Y * treat_mat
+
+W <- rbind(matrix(runif(3*T,0,0.5),3,T),
+		   matrix(runif(2*T,0.5,1),2,T)) # simulated unit-specific propensity score
+ 
+weights <- matrix(NA, N, T) # transform weights for regression
+weights[c(4,5),] <- 1/(W[c(4,5),]) # treated group
+weights[-c(4,5),] <- 1/(1-W[-c(4,5),]) # control group
+
+est_model_MCPanel_w <- mcnnm_wc_cv(M = Y_obs, C = weights, mask = treat_mat, W= weights, to_normalize = 0, to_estimate_u = 1, to_estimate_v = 1,
+	num_lam_L = 30, num_lam_B = 30, niter = 500, rel_tol = 1e-05, cv_ratio = 0.8, num_folds = 3, is_quiet = 1) 
+
+est_model_MCPanel_w$Mhat <- est_model_MCPanel_w$L + weights %*%est_model_MCPanel_w$B + replicate(T,est_model_MCPanel_w$u) + t(replicate(N,est_model_MCPanel_w$v))
 ```
-Note: it may be necessary for Windows R 3.4.2 users to use the patched version of R: https://cran.r-project.org/bin/windows/base/rpatched.html
-
-More details will be added soon.
-
-#### References
-Susan Athey, Mohsen Bayati, Nikolay Doudchenko, Guido Imbens, and Khashayar Khosravi. <b>Matrix Completion Methods for Causal Panel Data Models</b> [<a href="http://arxiv.org/abs/1710.10251">link</a>]

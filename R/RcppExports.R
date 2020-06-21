@@ -5,8 +5,8 @@ mcnnm_lam_range <- function(M, mask, W, to_estimate_u = 1L, to_estimate_v = 1L, 
     .Call(`_MCPanel_mcnnm_lam_range`, M, mask, W, to_estimate_u, to_estimate_v, niter, rel_tol)
 }
 
-mcnnm_wc_lam_range <- function(M, C, mask, W, to_normalize = 1L, to_estimate_u = 1L, to_estimate_v = 1L, niter = 1000L, rel_tol = 1e-5) {
-    .Call(`_MCPanel_mcnnm_wc_lam_range`, M, C, mask, W, to_normalize, to_estimate_u, to_estimate_v, niter, rel_tol)
+mcnnm_wc_lam_range <- function(M, C, mask, W, to_estimate_u = 1L, to_estimate_v = 1L, niter = 1000L, rel_tol = 1e-5) {
+    .Call(`_MCPanel_mcnnm_wc_lam_range`, M, C, mask, W, to_estimate_u, to_estimate_v, niter, rel_tol)
 }
 
 mcnnm <- function(M, mask, W, num_lam_L = 100L, lambda_L = as.numeric( c()), to_estimate_u = 1L, to_estimate_v = 1L, niter = 1000L, rel_tol = 1e-5, is_quiet = 1L) {
@@ -17,19 +17,19 @@ mcnnm_fit <- function(M, mask, W, lambda_L, to_estimate_u = 1L, to_estimate_v = 
     .Call(`_MCPanel_mcnnm_fit`, M, mask, W, lambda_L, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet)
 }
 
-mcnnm_wc <- function(M, C, mask, W, num_lam_L = 30L, num_lam_B = 30L, lambda_L = as.numeric( c()), lambda_B = as.numeric( c()), to_normalize = 1L, to_estimate_u = 1L, to_estimate_v = 1L, niter = 100L, rel_tol = 1e-5, is_quiet = 1L) {
-    .Call(`_MCPanel_mcnnm_wc`, M, C, mask, W, num_lam_L, num_lam_B, lambda_L, lambda_B, to_normalize, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet)
+mcnnm_wc <- function(M, C, mask, W, num_lam_L = 30L, num_lam_B = 30L, lambda_L = as.numeric( c()), lambda_B = as.numeric( c()), to_estimate_u = 1L, to_estimate_v = 1L, niter = 100L, rel_tol = 1e-5, is_quiet = 1L) {
+    .Call(`_MCPanel_mcnnm_wc`, M, C, mask, W, num_lam_L, num_lam_B, lambda_L, lambda_B, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet)
 }
 
-mcnnm_wc_fit <- function(M, C, mask, W, lambda_L, lambda_B, to_normalize = 1L, to_estimate_u = 1L, to_estimate_v = 1L, niter = 100L, rel_tol = 1e-5, is_quiet = 1L) {
-    .Call(`_MCPanel_mcnnm_wc_fit`, M, C, mask, W, lambda_L, lambda_B, to_normalize, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet)
+mcnnm_wc_fit <- function(M, C, mask, W, lambda_L, lambda_B, to_estimate_u = 1L, to_estimate_v = 1L, niter = 100L, rel_tol = 1e-5, is_quiet = 1L) {
+    .Call(`_MCPanel_mcnnm_wc_fit`, M, C, mask, W, lambda_L, lambda_B, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet)
 }
 
 mcnnm_cv <- function(M, mask, W, to_estimate_u = 1L, to_estimate_v = 1L, num_lam_L = 100L, niter = 400L, rel_tol = 1e-5, cv_ratio = 0.8, num_folds = 5L, is_quiet = 1L) {
     .Call(`_MCPanel_mcnnm_cv`, M, mask, W, to_estimate_u, to_estimate_v, num_lam_L, niter, rel_tol, cv_ratio, num_folds, is_quiet)
 }
 
-mcnnm_wc_cv <- function(M, C, mask, W, to_normalize = 1L, to_estimate_u = 1L, to_estimate_v = 1L, num_lam_L = 30L, num_lam_B = 30L, niter = 100L, rel_tol = 1e-5, cv_ratio = 0.8, num_folds = 1L, is_quiet = 1L) {
-    .Call(`_MCPanel_mcnnm_wc_cv`, M, C, mask, W, to_normalize, to_estimate_u, to_estimate_v, num_lam_L, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet)
+mcnnm_wc_cv <- function(M, C, mask, W, to_estimate_u = 1L, to_estimate_v = 1L, num_lam_L = 30L, num_lam_B = 30L, niter = 100L, rel_tol = 1e-5, cv_ratio = 0.8, num_folds = 1L, is_quiet = 1L) {
+    .Call(`_MCPanel_mcnnm_wc_cv`, M, C, mask, W, to_estimate_u, to_estimate_v, num_lam_L, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet)
 }
 

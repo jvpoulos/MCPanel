@@ -1140,31 +1140,6 @@ bool mask_size_check_W(NumericMatrix W, NumericMatrix mask){
   return (W_.rows() == mask_.rows() && W_.cols() == mask_.cols());
 }
 
-List normalize(NumericMatrix mat){
-  const Map<MatrixXd> mat_(as<Map<MatrixXd> >(mat));
-  VectorXd col_norms = VectorXd::Zero(mat_.cols());
-  MatrixXd mat_norm = MatrixXd::Zero(mat_.rows(), mat_.cols());
-  if(mat_.cols()>0){
-    for (int i=0; i < mat_.cols(); i++){
-      col_norms(i) = mat_.col(i).norm();
-      mat_norm.col(i) = mat_.col(i) / col_norms(i);
-    }
-  }
-  return List::create(Named("mat_norm")=mat_norm,
-                      Named("col_norms") = col_norms);
-}
-
-NumericMatrix normalize_back_cols(NumericMatrix B, NumericVector col_B_scales){
-  const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
-  MatrixXd B_new = B_;
-  if(col_B_scales.size()){
-    for (int i=0; i < col_B_scales.size(); i++){
-      B_new.col(i) = B_new.col(i) / col_B_scales(i);
-    }
-  }
-  return wrap(B_new);
-}
-
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////
 ////// Export functions to use in R
@@ -1205,7 +1180,7 @@ double mcnnm_lam_range(NumericMatrix M, NumericMatrix mask, NumericMatrix W, boo
 // EXPORT mcnnm_lam_range
 //////////////////////////////
 
-int mcnnm_wc_lam_range_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 1000, double rel_tol = 1e-5){
+int mcnnm_wc_lam_range_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 1000, double rel_tol = 1e-5){
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
   if(mask_check(mask) == 0){
     std::cerr << "Error: The mask matrix should only include 0 (for missing) and 1 (for observed entries)" << std::endl;
@@ -1226,26 +1201,14 @@ int mcnnm_wc_lam_range_check(NumericMatrix M, NumericMatrix C, NumericMatrix mas
   return 1;
 }
 // [[Rcpp::export]]
-List mcnnm_wc_lam_range(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 1000, double rel_tol = 1e-5){
+List mcnnm_wc_lam_range(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 1000, double rel_tol = 1e-5){
 
-  int input_checks = mcnnm_wc_lam_range_check(M, C, mask, W, to_normalize, to_estimate_u, to_estimate_v, niter, rel_tol);
+  int input_checks = mcnnm_wc_lam_range_check(M, C, mask, W, to_estimate_u, to_estimate_v, niter, rel_tol);
   if (input_checks == 0){
     throw std::invalid_argument("Invalid inputs ! Please modify");
   }
 
-  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-
-  NumericMatrix C_norm = C;
-  NumericVector C_col_norms;
-
-  if(to_normalize == 1 && C_.cols()>0){
-      List C_upd = normalize(C);
-      NumericMatrix C_tmp = C_upd["mat_norm"];
-      C_norm = C_tmp;
-      C_col_norms = C_upd["col_norms"];
-  }
-
-  List res= initialize_uv_B(M, C_norm, mask, W, to_estimate_u, to_estimate_v, niter, rel_tol);
+  List res= initialize_uv_B(M, C, mask, W, to_estimate_u, to_estimate_v, niter, rel_tol);
   return List::create(Named("lambda_L_max") = res["lambda_L_max"],
                       Named("lambda_B_max") = res["lambda_B_max"]);
 }
@@ -1358,7 +1321,7 @@ List mcnnm_fit(NumericMatrix M, NumericMatrix mask, NumericMatrix W, double lamb
 // EXPORT mcnnm_wc
 ////////////////////////////////
 
-int mcnnm_wc_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, int num_lam_L = 30, int num_lam_B = 30, NumericVector lambda_L = NumericVector::create(),NumericVector lambda_B = NumericVector::create(), bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
+int mcnnm_wc_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, int num_lam_L = 30, int num_lam_B = 30, NumericVector lambda_L = NumericVector::create(),NumericVector lambda_B = NumericVector::create(), bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
   if(lambda_L.size() > 0){
     num_lam_L = lambda_L.size();
   }
@@ -1393,35 +1356,15 @@ int mcnnm_wc_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, Numeric
   return 1;
 }
 // [[Rcpp::export]]
-List mcnnm_wc(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, int num_lam_L = 30, int num_lam_B = 30, NumericVector lambda_L = NumericVector::create(), NumericVector lambda_B = NumericVector::create(), bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
+List mcnnm_wc(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, int num_lam_L = 30, int num_lam_B = 30, NumericVector lambda_L = NumericVector::create(), NumericVector lambda_B = NumericVector::create(), bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
 
-  int input_checks = mcnnm_wc_check(M, C, mask, W, num_lam_L, num_lam_B, lambda_L, lambda_B, to_normalize, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet);
+  int input_checks = mcnnm_wc_check(M, C, mask, W, num_lam_L, num_lam_B, lambda_L, lambda_B, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet);
   if (input_checks == 0){
     throw std::invalid_argument("Invalid inputs ! Please modify");
   }
 
-  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
+  List res = NNM_B(M, C, mask, W, num_lam_L, num_lam_B, lambda_L, lambda_B, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet);
 
-  NumericMatrix C_norm = C;
-  NumericVector C_col_norms;
-
-  if(to_normalize == 1 && C_.cols()>0){
-      List C_upd = normalize(C);
-      NumericMatrix C_tmp = C_upd["mat_norm"];
-      C_norm = C_tmp;
-      C_col_norms = C_upd["col_norms"];
-  }
-
-  List res = NNM_B(M, C_norm, mask, W, num_lam_L, num_lam_B, lambda_L, lambda_B, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet);
-
-  if(to_normalize == 1 && C_.cols()>0){
-    for(int i=0; i<res.size(); i++){
-      List tmp = res(i);
-      NumericMatrix B_renorm = normalize_back_cols(tmp["B"], C_col_norms);
-      tmp["B"] = B_renorm;
-      res(i) = tmp;
-    }
-  }
   return res;
 }
 
@@ -1429,7 +1372,7 @@ List mcnnm_wc(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatri
 // EXPORT mcnnm_wc
 ////////////////////////////////
 
-int mcnnm_wc_fit_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, double lambda_L, double lambda_B, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
+int mcnnm_wc_fit_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, double lambda_L, double lambda_B, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
   if(mask_check(mask) == 0){
     std::cerr << "Error: The mask matrix should only include 0 (for missing) and 1 (for observed entries)" << std::endl;
@@ -1457,25 +1400,13 @@ int mcnnm_wc_fit_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, Num
   return 1;
 }
 // [[Rcpp::export]]
-List mcnnm_wc_fit(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, double lambda_L, double lambda_B, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
-  int input_checks = mcnnm_wc_fit_check(M, C, mask, W, lambda_L, lambda_B, to_normalize, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet);
+List mcnnm_wc_fit(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, double lambda_L, double lambda_B, bool to_estimate_u = 1, bool to_estimate_v = 1, int niter = 100, double rel_tol = 1e-5, bool is_quiet = 1){
+  int input_checks = mcnnm_wc_fit_check(M, C, mask, W, lambda_L, lambda_B, to_estimate_u, to_estimate_v, niter, rel_tol, is_quiet);
   if (input_checks == 0){
     throw std::invalid_argument("Invalid inputs ! Please modify");
   }
 
-  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-
-  NumericMatrix C_norm = C;
-  NumericVector C_col_norms;
-
-  if(to_normalize == 1 && C_.cols()>0){
-      List C_upd = normalize(C);
-      NumericMatrix C_tmp = C_upd["mat_norm"];
-      C_norm = C_tmp;
-      C_col_norms = C_upd["col_norms"];
-  }
-
-  List ranges = mcnnm_wc_lam_range(M, C_norm, mask, W, to_estimate_u, to_estimate_v, niter, rel_tol);
+  List ranges = mcnnm_wc_lam_range(M, C, mask, W, to_estimate_u, to_estimate_v, niter, rel_tol);
   double max_lam_L = ranges["lambda_L_max"];
   double max_lam_B = ranges["lambda_B_max"];
   NumericVector lambda_Ls_fin;
@@ -1523,14 +1454,8 @@ List mcnnm_wc_fit(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericM
     lambda_Bs_(num_lam_B_n) = lambda_B;
     lambda_Bs_fin = lambda_Bs_;
   }
-  List Q = NNM_B_opt_path(M, C_norm, mask, W, to_estimate_u, to_estimate_v, lambda_Ls_fin, lambda_Bs_fin, niter, rel_tol, is_quiet);
+  List Q = NNM_B_opt_path(M, C, mask, W, to_estimate_u, to_estimate_v, lambda_Ls_fin, lambda_Bs_fin, niter, rel_tol, is_quiet);
   List final_config = Q[Q.size()-1];
-
-  if(to_normalize == 1 && C_.cols()>0){
-    List tmp = final_config;
-    NumericMatrix B_renorm = normalize_back_cols(final_config["B"], C_col_norms);
-    final_config ["B"]= B_renorm;
-  }
 
   return List::create(Named("B") = final_config["B"],
                       Named("L") = final_config["L"],
@@ -1590,7 +1515,7 @@ List mcnnm_cv(NumericMatrix M, NumericMatrix mask, NumericMatrix W, bool to_esti
 // EXPORT mcnnm_wc_cv
 /////////////////////////////////
 
-int mcnnm_wc_cv_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_normalize, bool to_estimate_u, bool to_estimate_v, int num_lam_L, int num_lam_B, int niter, double rel_tol, double cv_ratio, int num_folds, bool is_quiet){
+int mcnnm_wc_cv_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_estimate_u, bool to_estimate_v, int num_lam_L, int num_lam_B, int niter, double rel_tol, double cv_ratio, int num_folds, bool is_quiet){
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));  
   if(mask_check(mask) == 0){
     std::cerr << "Error: The mask matrix should only include 0 (for missing) and 1 (for observed entries)" << std::endl;
@@ -1627,31 +1552,14 @@ int mcnnm_wc_cv_check(NumericMatrix M, NumericMatrix C, NumericMatrix mask, Nume
 }
 
 // [[Rcpp::export]]
-List mcnnm_wc_cv(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_normalize = 1, bool to_estimate_u = 1, bool to_estimate_v = 1,  int num_lam_L = 30, int num_lam_B = 30, int niter = 100, double rel_tol = 1e-5, double cv_ratio = 0.8, int num_folds = 1, bool is_quiet = 1){
+List mcnnm_wc_cv(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatrix W, bool to_estimate_u = 1, bool to_estimate_v = 1,  int num_lam_L = 30, int num_lam_B = 30, int niter = 100, double rel_tol = 1e-5, double cv_ratio = 0.8, int num_folds = 1, bool is_quiet = 1){
   List res;
-  int input_checks = mcnnm_wc_cv_check(M, C, mask, W, to_normalize, to_estimate_u, to_estimate_v, num_lam_L, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet);
+  int input_checks = mcnnm_wc_cv_check(M, C, mask, W, to_estimate_u, to_estimate_v, num_lam_L, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet);
   if (input_checks == 0){
     throw std::invalid_argument("Invalid inputs ! Please modify");
   }
 
-  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
+  res = NNM_CV_B(M, C, mask, W, to_estimate_u, to_estimate_v, num_lam_L, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet);
 
-  NumericMatrix C_norm = C;
-  NumericVector C_col_norms;
-
-  if(to_normalize == 1 && C_.cols()>0){
-      List C_upd = normalize(C);
-      NumericMatrix C_tmp = C_upd["mat_norm"];
-      C_norm = C_tmp;
-      C_col_norms = C_upd["col_norms"];
-  }
-
-  res = NNM_CV_B(M, C_norm, mask, W, to_estimate_u, to_estimate_v, num_lam_L, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet);
-  if(to_normalize == 1 && C_.cols()>0){
-    List tmp = res;
-    NumericMatrix B_renorm = normalize_back_cols(tmp["B"], C_col_norms);
-    tmp["B"] = B_renorm;
-    res = tmp;
-  }  
   return res;
 }
