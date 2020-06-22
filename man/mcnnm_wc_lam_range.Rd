@@ -17,7 +17,7 @@ mcnnm_wc_lam_range(M, C, mask, W, to_normalize = 1L, to_estimate_u = 1L,
 
 \item{W}{Matrix of weights. The input should be N (number of units) by T (number of time periods).}
 
-\item{to_normalize}{Optional boolean parameter indicating whether to normalize covariates or not (columns of X and Z). The default value is 1. If this value is set to 0, the result would be sensitive to scales in covariates.}
+\item{to_normalize}{Optional boolean parameter indicating whether to normalize covariates or not (columns of C). The default value is 1. If this value is set to 0, the result would be sensitive to scales in covariates.}
 
 \item{to_estimate_u}{Optional boolean input for wheter estimating fixed unit effects (row means of M) or not. Default is 1.}
 

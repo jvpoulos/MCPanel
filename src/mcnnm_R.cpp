@@ -81,7 +81,7 @@ NumericMatrix ComputeMatrix_B(NumericMatrix L, NumericMatrix C, NumericMatrix B,
   int num_rows = L_.rows();
   int num_cols = L_.cols();
 
-  MatrixXd res_ = L_ + C_ * B_ + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
+  MatrixXd res_ = L_ + C_.cwiseProduct(B_) + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
 
   return wrap(res_);
 }
@@ -286,7 +286,7 @@ NumericVector update_u_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, Nume
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
   const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
   const Map<VectorXd> v_(as<Map<VectorXd> >(v));
-  MatrixXd T_ = C_ * B_;
+  MatrixXd T_ = C_.cwiseProduct(B_);
 
   VectorXd res(M_.rows(),1);
   for (int i = 0; i<M_.rows(); i++){
@@ -341,7 +341,7 @@ NumericVector update_v_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, Nume
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
   const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
   const Map<VectorXd> u_(as<Map<VectorXd> >(u));
-  MatrixXd T_ = C_ * B_;
+  MatrixXd T_ = C_.cwiseProduct(B_);
 
   VectorXd res(M_.cols(),1);
   for (int i = 0; i<M_.cols(); i++)
@@ -474,7 +474,6 @@ List initialize_uv_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, Numer
     using Eigen::Map;
     const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
     const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
-    const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
     int num_rows = M_.rows();
     int num_cols = M_.cols();
 
@@ -666,7 +665,6 @@ List NNM_fit_B(NumericMatrix M, NumericMatrix C, NumericMatrix B_init, NumericMa
   // matrices L, B, u, and v are updated till convergence via coordinate descent.
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
-  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
   int num_rows = M_.rows();
   int num_cols = M_.cols();
 

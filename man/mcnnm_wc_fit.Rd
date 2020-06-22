@@ -22,7 +22,7 @@ mcnnm_wc_fit(M, C, mask, W, lambda_L, lambda_B, to_normalize = 1L,
 
 \item{lambda_B}{Required parameter for fitting the model as this function computes the result for a specified value of lambda_B.}
 
-\item{to_normalize}{Optional boolean parameter indicating whether to normalize covariates or not (columns of X and Z). The default value is 1. If this value is set to 0, the result would be sensitive to scales in covariates.}
+\item{to_normalize}{Optional boolean parameter indicating whether to normalize covariates or not (columns of C). The default value is 1. If this value is set to 0, the result would be sensitive to scales in covariates.}
 
 \item{to_estimate_u}{Optional boolean input for wheter estimating fixed unit effects (row means of M) or not. Default is 1.}
 

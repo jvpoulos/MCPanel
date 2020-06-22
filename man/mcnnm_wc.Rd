@@ -4,9 +4,9 @@
 \alias{mcnnm_wc}
 \title{This function trains all models for given vectors of lambda_L and lambda_B. Each model contains L, u, v, lambda_B, and lambda_B.}
 \usage{
-mcnnm_wc(M, C, mask, W, num_lam_L = 30L, num_lam_B = 30L,
+mcnnm_wc(M, C, mask, W, to_normalize = 1L, num_lam_L = 30L, num_lam_B = 30L,
   lambda_L = as.numeric(c()), lambda_B = as.numeric(c()),
-  o_estimate_u = 1L, to_estimate_v = 1L,
+  to_estimate_u = 1L, to_estimate_v = 1L,
   niter = 100L, rel_tol = 1e-05, is_quiet = 1L)
 }
 \arguments{
@@ -17,6 +17,8 @@ mcnnm_wc(M, C, mask, W, num_lam_L = 30L, num_lam_B = 30L,
 \item{mask}{Binary mask with the same shape as M containing observed entries.}
 
 \item{W}{Matrix of weights. The input should be N (number of units) by T (number of time periods).}
+
+\item{to_normalize}{Optional boolean parameter indicating whether to normalize covariates or not (columns of C). The default value is 1. If this value is set to 0, the result would be sensitive to scales in covariates.}
 
 \item{num_lam_L}{Optional parameter on the number of lambda_Ls to consider for learning. The default number is 30 and lambda_L values are from minimum number which makes L zero to 1e-3 times this minimum number.}
 

@@ -20,7 +20,7 @@ mcnnm_wc_cv(M, C, mask, W, to_normalize = 1L, to_estimate_u = 1L,
 
 \item{W}{Matrix with the same shape as M containing weights for the training loss. W should be in inputted in the form of W/(1-W) and contain values between 0 and 1.}
 
-\item{to_normalize}{Optional boolean parameter indicating whether to normalize covariates or not (columns of X and Z). The default value is 1. If this value is set to 0, the result would be sensitive to scales in covariates.}
+\item{to_normalize}{Optional boolean parameter indicating whether to normalize covariates or not (columns of C). The default value is 1. If this value is set to 0, the result would be sensitive to scales in covariates.}
 
 \item{to_estimate_u}{Optional boolean input for wheter estimating fixed unit effects (row means of M) or not. Default is 1.}
 
