@@ -43,7 +43,9 @@ weights <- matrix(NA, N, T) # transform weights for regression
 weights[c(4,5),] <- 1/(W[c(4,5),]) # treated group
 weights[-c(4,5),] <- 1/(1-W[-c(4,5),]) # control group
 
-est_model_MCPanel_w <- mcnnm_wc_fit(M = Y_obs, C = W, mask = treat_mat, W= W, lambda_L=0.1, lambda_B=0.1)
+est_model_MCPanel_w <- mcnnm_wc_fit(M = Y_obs, C = weights, mask = treat_mat, W= weights, lambda_L=0.1, lambda_B=0.1, to_normalize = 1L,
+  to_estimate_u = 1L, to_estimate_v = 1L, niter = 100L,
+  rel_tol = 1e-05, is_quiet = 1L)
 
-est_model_MCPanel_w$Mhat <- est_model_MCPanel_w$L + weights %*%est_model_MCPanel_w$B + replicate(T,est_model_MCPanel_w$u) + t(replicate(N,est_model_MCPanel_w$v))
+est_model_MCPanel_w$Mhat <- est_model_MCPanel_w$L + weights*est_model_MCPanel_w$B + replicate(T,est_model_MCPanel_w$u) + t(replicate(N,est_model_MCPanel_w$v))
 ```

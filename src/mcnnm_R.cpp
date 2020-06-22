@@ -105,7 +105,7 @@ double Compute_objval(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Nume
 
   MatrixXd w_mask_ = (W_.array()) * mask_.array();
 
-  double obj_val = (double(1)/train_size) * w_mask_.sum() * (err_mask_.cwiseProduct(err_mask_)).sum() + lambda_L * sum_sing_vals;
+  double obj_val = (double(1)/train_size) * (w_mask_.cwiseProduct(err_mask_.cwiseProduct(err_mask_))).sum() + lambda_L * sum_sing_vals;
   return obj_val;
 }
 
@@ -132,7 +132,7 @@ double Compute_objval_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, Numer
 
   MatrixXd w_mask_ = (W_.array()) * mask_.array();
 
-  double obj_val = (double(1)/train_size) * w_mask_.sum() * (err_mask_.cwiseProduct(err_mask_)).sum() + lambda_L * sum_sing_vals + lambda_B*norm_B;
+  double obj_val = (double(1)/train_size) * (w_mask_.cwiseProduct(err_mask_.cwiseProduct(err_mask_))).sum() + lambda_L * sum_sing_vals + lambda_B*norm_B;
   return obj_val;
 }
 

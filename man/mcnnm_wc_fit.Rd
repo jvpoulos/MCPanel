@@ -5,7 +5,7 @@
 \title{This function trains a model for specified values of lambda_L and lambda_B. The result contains L, B, u, v, lambda_L, and lambda_B. 
 The only difference with mcnnm_wc is that this function trains only for specified pair of values (lambda_L, lambda_B).}
 \usage{
-mcnnm_wc_fit(M, C, X, Z, mask, W, lambda_L, lambda_B, to_normalize = 1L,
+mcnnm_wc_fit(M, C, mask, W, lambda_L, lambda_B, to_normalize = 1L,
   to_estimate_u = 1L, to_estimate_v = 1L, niter = 100L,
   rel_tol = 1e-05, is_quiet = 1L)
 }
