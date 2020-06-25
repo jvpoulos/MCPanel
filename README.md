@@ -44,7 +44,7 @@ weights[c(4,5),] <- 1/(W[c(4,5),]) # treated group
 weights[-c(4,5),] <- 1/(1-W[-c(4,5),]) # control group
 
 est_model_MCPanel_w <- mcnnm_wc_cv(M = Y_obs, C = weights, mask = treat_mat, W = weights, 
-	to_normalize = 1, to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 30, num_lam_B = 30, niter = 1000, rel_tol = 1e-03, cv_ratio = 0.8, num_folds = 2, is_quiet = 0)
+	to_normalize = 1, to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 30, num_lam_B = 30, niter = 100, rel_tol = 1e-03, cv_ratio = 0.8, num_folds = 2, is_quiet = 0)
 
-est_model_MCPanel_w$Mhat <- est_model_MCPanel_w$L + t(weights)%*%est_model_MCPanel_w$B + replicate(T,est_model_MCPanel_w$u) + t(replicate(N,est_model_MCPanel_w$v))
+est_model_MCPanel_w$Mhat <- est_model_MCPanel_w$L + weights*est_model_MCPanel_w$B + replicate(T,est_model_MCPanel_w$u) + t(replicate(N,est_model_MCPanel_w$v))
 ```
