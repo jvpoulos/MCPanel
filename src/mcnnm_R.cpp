@@ -122,7 +122,7 @@ double Compute_objval_B(NumericMatrix M, NumericMatrix C, NumericVector B, Numer
 
   int train_size = mask_.sum();
 
-  double norm_B = B_.cwiseAbs().colwise().sum();
+  double norm_B = B_.lpNorm<1>();
 
   NumericMatrix est_mat = ComputeMatrix_B(L, C, B, u, v);
   const Map<MatrixXd> est_mat_(as<Map<MatrixXd> >(est_mat));
@@ -397,7 +397,7 @@ NumericMatrix update_B_B(NumericMatrix M, NumericMatrix C, NumericVector B, Nume
   const Map<MatrixXd> P_(as<Map<MatrixXd> >(P));
   MatrixXd P_omega_ = M_ - P_;
   MatrixXd masked_P_omega_ = P_omega_.cwiseProduct(mask_);
-  MatrixXd proj_ = masked_P_omega + B;
+  MatrixXd proj_ = masked_P_omega_ + B;
   NumericMatrix proj = wrap(proj_);
   List svd_dec = MySVD(proj);
   MatrixXd U_ = svd_dec["U"];
