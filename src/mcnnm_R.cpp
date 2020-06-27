@@ -382,34 +382,6 @@ NumericMatrix Reshape(NumericVector M, int row, int col){
   return wrap(res);
 }
 
-NumericMatrix update_B_B(NumericMatrix M, NumericMatrix C, NumericVector B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v, double lambda_B){
-
-  // This function updates the matrix B in the coordinate descent algorithm. The core step of this part is
-  // performing a SVT update.
-
-  using Eigen::Map;
-  const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
-  const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
-  const Map<VectorXd> B_(as<Map<VectorXd> >(B));
-
-  int train_size = mask_.sum();
-  NumericMatrix P = ComputeMatrix_B(L, C, B, u, v);
-  const Map<MatrixXd> P_(as<Map<MatrixXd> >(P));
-  MatrixXd P_omega_ = M_ - P_;
-  MatrixXd masked_P_omega_ = P_omega_.cwiseProduct(mask_);
-  MatrixXd proj_ = masked_P_omega_ + B_;
-  NumericMatrix proj = wrap(proj_);
-  List svd_dec = MySVD(proj);
-  MatrixXd U_ = svd_dec["U"];
-  MatrixXd V_ = svd_dec["V"];
-  VectorXd sing_ = svd_dec["Sigma"];
-  NumericMatrix U = wrap(U_);
-  NumericMatrix V = wrap(V_);
-  NumericVector sing = wrap(sing_);
-  NumericVector B_upd = SVT(U, V, sing, lambda_B*train_size/2 );
-  return wrap(B_upd);
-}
-
 NumericVector update_B_B(NumericMatrix M, NumericMatrix C, NumericVector B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v){
 
   // This function updates the matrix B in the coordinate descent algorithm, when covariates exist.
@@ -427,7 +399,7 @@ NumericVector update_B_B(NumericMatrix M, NumericMatrix C, NumericVector B, Nume
   VectorXd res(M_.cols(),1);
   for (int i = 0; i<M_.cols(); i++)
   {
-    VectorXd b_ = T_.col(i)+L_.col(i)+u_+_v-M_.col(i);
+    VectorXd b_ = T_.col(i)+L_.col(i)+u_+v_-M_.col(i);
     VectorXd h_ = mask_.col(i);
     VectorXd b_mask_ = b_.cwiseProduct(h_);
     int l = (h_.array() > 0).count();
@@ -725,7 +697,7 @@ List NNM_fit_B(NumericMatrix M, NumericMatrix C, NumericVector B_init, NumericMa
       v = wrap(VectorXd::Zero(M.cols()));
     }
     // Update B
-    NumericVector upd_B = update_B_B(M, C, B, mask, L, u, v, lambda_B);
+    NumericVector upd_B = update_B_B(M, C, B, mask, L, u, v);
     B = upd_B;
     // Update L
     List upd_L = update_L_B(M, C, B, mask, L, u, v, lambda_L);
