@@ -763,7 +763,7 @@ List NNM_with_uv_init_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, Nu
   int num_cols = M.cols();
   List res(num_lam_L*num_lam_B);
   NumericMatrix L_init = wrap(MatrixXd::Zero(num_rows,num_cols));
-  NumericVector B_init = wrap(MatrixXd::Zero(num_rows,num_cols));
+  NumericVector B_init = wrap(VectorXd::Zero(num_cols));
   for (int j = 0; j<num_lam_B; j++){
     if(j > 0){
       List previous_B = res[(j-1)*num_lam_B];
@@ -860,7 +860,7 @@ List NNM_with_uv_init_B_opt_path(NumericMatrix M, NumericMatrix C, NumericMatrix
 
   List res(num_lam_L+num_lam_B-1);
   NumericMatrix L_init = wrap(MatrixXd::Zero(num_rows,num_cols));
-  NumericVector B_init = wrap(MatrixXd::Zero(num_rows,num_cols));
+  NumericVector B_init = wrap(VectorXd::Zero(num_cols));
   for (int j = 0; j<num_lam_B; j++){
     List previous_pt = NNM_fit_B(M, C, B_init, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, lambda_L(0), lambda_B(j), niter, rel_tol, is_quiet);
     NumericMatrix L_upd = previous_pt["L"];
