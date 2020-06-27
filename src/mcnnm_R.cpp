@@ -67,7 +67,7 @@ NumericMatrix ComputeMatrix(NumericMatrix L, NumericVector u, NumericVector v){
   return wrap(res_);
 }
 
-NumericMatrix ComputeMatrix_B(NumericMatrix L, NumericMatrix C, NumericMatrix B, NumericVector u, NumericVector v){
+NumericMatrix ComputeMatrix_B(NumericMatrix L, NumericMatrix C, NumericVector B, NumericVector u, NumericVector v){
 
   // This function computes L + C*B + u1^T + 1v^T, which is our decomposition.
 
@@ -76,12 +76,12 @@ NumericMatrix ComputeMatrix_B(NumericMatrix L, NumericMatrix C, NumericMatrix B,
   const Map<VectorXd> u_(as<Map<VectorXd> >(u));
   const Map<VectorXd> v_(as<Map<VectorXd> >(v));
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
+  const Map<VectorXd> B_(as<Map<VectorXd> >(B));
 
   int num_rows = L_.rows();
   int num_cols = L_.cols();
 
-  MatrixXd res_ = L_ + C_.cwiseProduct(B_) + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
+  MatrixXd res_ = L_ + C_*B_ + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
 
   return wrap(res_);
 }
@@ -109,20 +109,20 @@ double Compute_objval(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Nume
   return obj_val;
 }
 
-double Compute_objval_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix mask, NumericMatrix L, NumericMatrix W, NumericVector u, NumericVector v, double sum_sing_vals, double lambda_L, double lambda_B){
+double Compute_objval_B(NumericMatrix M, NumericMatrix C, NumericVector B, NumericMatrix mask, NumericMatrix L, NumericMatrix W, NumericVector u, NumericVector v, double sum_sing_vals, double lambda_L, double lambda_B){
 
   // This function computes our objective value which is decomposed as the weighted combination of error plus nuclear norm of L
-  // and also element-wise norm 1 of B.
+  // and also L1 norm of vector B.
 
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
   const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
-  const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
+  const Map<VectorXd> B_(as<Map<VectorXd> >(B));
 
   int train_size = mask_.sum();
 
-  double norm_B = B_.array().abs().sum();
+  double norm_B = B_.cwise().abs().sum();
 
   NumericMatrix est_mat = ComputeMatrix_B(L, C, B, u, v);
   const Map<MatrixXd> est_mat_(as<Map<MatrixXd> >(est_mat));
@@ -153,7 +153,7 @@ double Compute_RMSE(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Numeri
   return res;
 }
 
-double Compute_RMSE_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v){
+double Compute_RMSE_B(NumericMatrix M, NumericMatrix C, NumericVector B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v){
 
   // This function computes Root Mean Squared Error of computed decomposition L, B, u, v.
 
@@ -219,7 +219,7 @@ List update_L(NumericMatrix M, NumericMatrix mask, NumericMatrix L, NumericVecto
                       Named("Sigma") = sing);
 }
 
-List update_L_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v, double lambda_L){
+List update_L_B(NumericMatrix M, NumericMatrix C, NumericVector B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v, double lambda_L){
 
   // This function updates L in coordinate descent algorithm. The core step of this part is
   // performing a SVT update. Furthermore, it saves the singular values (needed to compute objective value) later.
@@ -275,7 +275,7 @@ NumericVector update_u(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Num
   return wrap(res);
 }
 
-NumericVector update_u_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix mask, NumericMatrix L, NumericVector v){
+NumericVector update_u_B(NumericMatrix M, NumericMatrix C, NumericVector B, NumericMatrix mask, NumericMatrix L, NumericVector v){
 
   // This function updates u in coordinate descent algorithm, when covariates are available.
 
@@ -284,9 +284,9 @@ NumericVector update_u_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, Nume
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
   const Map<MatrixXd> L_(as<Map<MatrixXd> >(L));
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
+  const Map<VectorXd> B_(as<Map<VectorXd> >(B));
   const Map<VectorXd> v_(as<Map<VectorXd> >(v));
-  MatrixXd T_ = C_.cwiseProduct(B_);
+  MatrixXd T_ = C_*B_;
 
   VectorXd res(M_.rows(),1);
   for (int i = 0; i<M_.rows(); i++){
@@ -330,7 +330,7 @@ NumericVector update_v(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Num
   return wrap(res);
 }
 
-NumericVector update_v_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix mask, NumericMatrix L, NumericVector u){
+NumericVector update_v_B(NumericMatrix M, NumericMatrix C, NumericVector B, NumericMatrix mask, NumericMatrix L, NumericVector u){
 
   // This function updates the matrix v in the coordinate descent algorithm, when covariates exist.
 
@@ -339,9 +339,9 @@ NumericVector update_v_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, Nume
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
   const Map<MatrixXd> L_(as<Map<MatrixXd> >(L));
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
-  const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
+  const Map<VectorXd> B_(as<Map<VectorXd> >(B));
   const Map<VectorXd> u_(as<Map<VectorXd> >(u));
-  MatrixXd T_ = C_.cwiseProduct(B_);
+  MatrixXd T_ = C_*B_;
 
   VectorXd res(M_.cols(),1);
   for (int i = 0; i<M_.cols(); i++)
@@ -382,7 +382,7 @@ NumericMatrix Reshape(NumericVector M, int row, int col){
   return wrap(res);
 }
 
-NumericMatrix update_B_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v, double lambda_B){
+NumericMatrix update_B_B(NumericMatrix M, NumericMatrix C, NumericVector B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v, double lambda_B){
 
   // This function updates the matrix B in the coordinate descent algorithm. The core step of this part is
   // performing a SVT update.
@@ -390,14 +390,14 @@ NumericMatrix update_B_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, Nume
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
-  const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
+  const Map<VectorXd> B_(as<Map<VectorXd> >(B));
 
   int train_size = mask_.sum();
   NumericMatrix P = ComputeMatrix_B(L, C, B, u, v);
   const Map<MatrixXd> P_(as<Map<MatrixXd> >(P));
   MatrixXd P_omega_ = M_ - P_;
   MatrixXd masked_P_omega_ = P_omega_.cwiseProduct(mask_);
-  MatrixXd proj_ = masked_P_omega_ + B_;
+  MatrixXd proj_ = masked_P_omega_.array() + B_;
   NumericMatrix proj = wrap(proj_);
   List svd_dec = MySVD(proj);
   MatrixXd U_ = svd_dec["U"];
@@ -406,8 +406,7 @@ NumericMatrix update_B_B(NumericMatrix M, NumericMatrix C, NumericMatrix B, Nume
   NumericMatrix U = wrap(U_);
   NumericMatrix V = wrap(V_);
   NumericVector sing = wrap(sing_);
-  NumericMatrix B_upd = SVT(U, V, sing, lambda_B*train_size/2 );
-  //L = SVT(U,V,sing,lambda_L/2);
+  NumericVector B_upd = SVT(U, V, sing, lambda_B*train_size/2 );
   return wrap(B_upd);
 }
 
@@ -483,11 +482,11 @@ List initialize_uv_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, Numer
     VectorXd u_ = VectorXd::Zero(num_rows);
     VectorXd v_ = VectorXd::Zero(num_cols);
     MatrixXd L_ = MatrixXd::Zero(num_rows,num_cols);
-    MatrixXd B_ = MatrixXd::Zero(num_rows,num_cols);
+    VectorXd B_ = VectorXd::Zero(num_cols);
     NumericVector u = wrap(u_);
     NumericVector v = wrap(v_);
     NumericMatrix L = wrap(L_);
-    NumericMatrix B = wrap(B_);
+    NumericVector B = wrap(B_);
     obj_val = Compute_objval_B(M, C, B, mask, L, W, u , v, 0, 0, 0);
     for(int iter = 0; iter < niter; iter++){
       if(to_estimate_u == 1){
@@ -658,7 +657,7 @@ List NNM_fit(NumericMatrix M, NumericMatrix mask, NumericMatrix L_init, NumericM
                       Named("v") = v);
 }
 
-List NNM_fit_B(NumericMatrix M, NumericMatrix C, NumericMatrix B_init, NumericMatrix mask, NumericMatrix L_init, NumericMatrix W, NumericVector u_init, NumericVector v_init, bool to_estimate_u, bool to_estimate_v, double lambda_L, double lambda_B, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
+List NNM_fit_B(NumericMatrix M, NumericMatrix C, NumericVector B_init, NumericMatrix mask, NumericMatrix L_init, NumericMatrix W, NumericVector u_init, NumericVector v_init, bool to_estimate_u, bool to_estimate_v, double lambda_L, double lambda_B, int niter = 1000, double rel_tol = 1e-5, bool is_quiet = 1){
 
   // This function performs cyclic coordinate descent updates.
   // For given matrices M, mask, and initial starting decomposition given by L_init, u_init, and v_init,
@@ -675,7 +674,7 @@ List NNM_fit_B(NumericMatrix M, NumericMatrix C, NumericMatrix B_init, NumericMa
   VectorXd sing = svd_dec["Sigma"];
   double sum_sigma = sing.sum();
   obj_val = Compute_objval_B(M, C, B_init, mask, L_init, W, u_init, v_init, sum_sigma, lambda_L, lambda_B);
-  NumericMatrix B = B_init;
+  NumericVector B = B_init;
   NumericMatrix L = L_init;
   NumericVector u = u_init;
   NumericVector v = v_init;
@@ -696,7 +695,7 @@ List NNM_fit_B(NumericMatrix M, NumericMatrix C, NumericMatrix B_init, NumericMa
       v = wrap(VectorXd::Zero(M.cols()));
     }
     // Update B
-    NumericMatrix upd_B = update_B_B(M, C, B, mask, L, u, v, lambda_B);
+    NumericVector upd_B = update_B_B(M, C, B, mask, L, u, v, lambda_B);
     B = upd_B;
     // Update L
     List upd_L = update_L_B(M, C, B, mask, L, u, v, lambda_L);
@@ -764,12 +763,12 @@ List NNM_with_uv_init_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, Nu
   int num_cols = M.cols();
   List res(num_lam_L*num_lam_B);
   NumericMatrix L_init = wrap(MatrixXd::Zero(num_rows,num_cols));
-  NumericMatrix B_init = wrap(MatrixXd::Zero(num_rows,num_cols));
+  NumericVector B_init = wrap(MatrixXd::Zero(num_rows,num_cols));
   for (int j = 0; j<num_lam_B; j++){
     if(j > 0){
       List previous_B = res[(j-1)*num_lam_B];
       NumericMatrix L_upd = previous_B["L"];
-      NumericMatrix B_upd = previous_B["B"];
+      NumericVector B_upd = previous_B["B"];
       L_init = L_upd;
       u_init = previous_B["u"];
       v_init = previous_B["v"];
@@ -779,7 +778,7 @@ List NNM_with_uv_init_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, Nu
      List previous_L = NNM_fit_B(M, C, B_init, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, lambda_L[i], lambda_B[j], niter, rel_tol, is_quiet);
      res[j*num_lam_L+i] = previous_L;
      NumericMatrix L_upd = previous_L["L"];
-     NumericMatrix B_upd = previous_L["B"];
+     NumericVector B_upd = previous_L["B"];
      L_init = L_upd;
      u_init = previous_L["u"];
      v_init = previous_L["v"];
@@ -861,11 +860,11 @@ List NNM_with_uv_init_B_opt_path(NumericMatrix M, NumericMatrix C, NumericMatrix
 
   List res(num_lam_L+num_lam_B-1);
   NumericMatrix L_init = wrap(MatrixXd::Zero(num_rows,num_cols));
-  NumericMatrix B_init = wrap(MatrixXd::Zero(num_rows,num_cols));
+  NumericVector B_init = wrap(MatrixXd::Zero(num_rows,num_cols));
   for (int j = 0; j<num_lam_B; j++){
     List previous_pt = NNM_fit_B(M, C, B_init, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, lambda_L(0), lambda_B(j), niter, rel_tol, is_quiet);
     NumericMatrix L_upd = previous_pt["L"];
-    NumericMatrix B_upd = previous_pt["B"];
+    NumericVector B_upd = previous_pt["B"];
     res[j] = previous_pt;
     L_init = L_upd;
     B_init = B_upd;
@@ -876,7 +875,7 @@ List NNM_with_uv_init_B_opt_path(NumericMatrix M, NumericMatrix C, NumericMatrix
     List previous_pt = NNM_fit_B(M, C, B_init, mask, L_init, W, u_init, v_init, to_estimate_u, to_estimate_v, lambda_L(i), lambda_B(num_lam_B-1), niter, rel_tol, is_quiet);
     res[(i-1)+num_lam_B] = previous_pt;
     NumericMatrix L_upd = previous_pt["L"];
-    NumericMatrix B_upd = previous_pt["B"];
+    NumericVector B_upd = previous_pt["B"];
     L_init = L_upd;
     B_init = B_upd;
     u_init = previous_pt["u"];
@@ -1071,7 +1070,7 @@ List NNM_CV_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatri
         NumericMatrix L_use = this_config["L"];
         NumericVector u_use = this_config["u"];
         NumericVector v_use = this_config["v"];
-        NumericMatrix B_use = this_config["B"];
+        NumericVector B_use = this_config["B"];
         MSE(i,j) += std::pow(Compute_RMSE_B(M, C, B_use, mask_validation, L_use, u_use, v_use) ,2);
       }  
     }
@@ -1152,8 +1151,8 @@ List normalize(NumericMatrix mat){
                       Named("col_norms") = col_norms);
 }
 
-NumericMatrix normalize_back_cols(NumericMatrix B, NumericVector col_B_scales){
-  const Map<MatrixXd> B_(as<Map<MatrixXd> >(B));
+NumericMatrix normalize_back_cols(NumericVector B, NumericVector col_B_scales){
+  const Map<VectorXd> B_(as<Map<VectorXd> >(B));
   MatrixXd B_new = B_;
   if(col_B_scales.size()){
     for (int i=0; i < col_B_scales.size(); i++){
@@ -1415,7 +1414,7 @@ List mcnnm_wc(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatri
   if(to_normalize == 1 && C_.cols()>0){
     for(int i=0; i<res.size(); i++){
       List tmp = res(i);
-      NumericMatrix B_renorm = normalize_back_cols(tmp["B"], C_col_norms);
+      NumericVector B_renorm = normalize_back_cols(tmp["B"], C_col_norms);
       tmp["B"] = B_renorm;
       res(i) = tmp;
     }
@@ -1526,7 +1525,7 @@ List mcnnm_wc_fit(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericM
 
   if(to_normalize == 1 && C_.cols()>0){
     List tmp = final_config;
-    NumericMatrix B_renorm = normalize_back_cols(final_config["B"], C_col_norms);
+    NumericVector B_renorm = normalize_back_cols(final_config["B"], C_col_norms);
     final_config ["B"]= B_renorm;
   }
 
@@ -1647,7 +1646,7 @@ List mcnnm_wc_cv(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMa
   res = NNM_CV_B(M, C_norm, mask, W, to_estimate_u, to_estimate_v, num_lam_L, num_lam_B, niter, rel_tol, cv_ratio, num_folds, is_quiet);
   if(to_normalize == 1 && C_.cols()>0){
     List tmp = res;
-    NumericMatrix B_renorm = normalize_back_cols(tmp["B"], C_col_norms);
+    NumericVector B_renorm = normalize_back_cols(tmp["B"], C_col_norms);
     tmp["B"] = B_renorm;
     res = tmp;
   }  

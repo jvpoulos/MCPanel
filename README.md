@@ -32,6 +32,8 @@ N <- 5 # No. units
 
 Y <- replicate(T,rnorm(N)) # simulated observed outcomes
 
+X <- replicate(T,rnorm(N,mean=rowMeans(Y), sd=rowSds(Y))) # simulated covariates
+
 treat_mat <- simul_adapt(M = Y, N_t = 2, T0= 3, treat_indices=c(4,5))
 
 Y_obs <- Y * treat_mat
@@ -43,8 +45,8 @@ weights <- matrix(NA, N, T) # transform weights for regression
 weights[c(4,5),] <- 1/(W[c(4,5),]) # treated group
 weights[-c(4,5),] <- 1/(1-W[-c(4,5),]) # control group
 
-est_model_MCPanel_w <- mcnnm_wc_cv(M = Y_obs, C = weights, mask = treat_mat, W = weights, 
+est_model_MCPanel_w <- mcnnm_wc_cv(M = Y_obs, C = X, mask = treat_mat, W = weights, 
 	to_normalize = 1, to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 30, num_lam_B = 30, niter = 100, rel_tol = 1e-03, cv_ratio = 0.8, num_folds = 2, is_quiet = 0)
 
-est_model_MCPanel_w$Mhat <- est_model_MCPanel_w$L + weights*est_model_MCPanel_w$B + replicate(T,est_model_MCPanel_w$u) + t(replicate(N,est_model_MCPanel_w$v))
+est_model_MCPanel_w$Mhat <- est_model_MCPanel_w$L + replicate(T,as.vector(X%*%est_model_MCPanel_w$B)) + replicate(T,est_model_MCPanel_w$u) + t(replicate(N,est_model_MCPanel_w$v))
 ```
