@@ -410,6 +410,36 @@ NumericMatrix update_B_B(NumericMatrix M, NumericMatrix C, NumericVector B, Nume
   return wrap(B_upd);
 }
 
+NumericVector update_B_B(NumericMatrix M, NumericMatrix C, NumericVector B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v){
+
+  // This function updates the matrix B in the coordinate descent algorithm, when covariates exist.
+
+  using Eigen::Map;
+  const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
+  const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
+  const Map<MatrixXd> L_(as<Map<MatrixXd> >(L));
+  const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
+  const Map<VectorXd> B_(as<Map<VectorXd> >(B));
+  const Map<VectorXd> u_(as<Map<VectorXd> >(u));
+  const Map<VectorXd> v_(as<Map<VectorXd> >(v));
+  MatrixXd T_ = C_*B_;
+
+  VectorXd res(M_.cols(),1);
+  for (int i = 0; i<M_.cols(); i++)
+  {
+    VectorXd b_ = T_.col(i)+L_.col(i)+u_+_v-M_.col(i);
+    VectorXd h_ = mask_.col(i);
+    VectorXd b_mask_ = b_.cwiseProduct(h_);
+    int l = (h_.array() > 0).count();
+    if (l>0){
+      res(i)=-b_mask_.sum()/l;
+    }
+    else{
+      res(i) = 0;
+    }
+  }
+  return wrap(res);
+}
 List initialize_uv(NumericMatrix M, NumericMatrix mask, NumericMatrix W, bool to_estimate_u, bool to_estimate_v, int niter = 1000, double rel_tol = 1e-5){
 
   // This function solves finds the optimal u and v assuming that L is zero. This would be later
