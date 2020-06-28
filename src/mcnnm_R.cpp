@@ -81,7 +81,11 @@ NumericMatrix ComputeMatrix_B(NumericMatrix L, NumericMatrix C, NumericVector B,
   int num_rows = L_.rows();
   int num_cols = L_.cols();
 
-  MatrixXd res_ = L_ + C_*B_ + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
+  MatrixXd B_new_ = B_.replicate(1,num_cols);
+
+  MatrixXd CB_ = C_* B_new_;
+
+  MatrixXd res_ = L_ + CB_ + u_ * VectorXd::Constant(num_cols,1).transpose() + VectorXd::Constant(num_rows,1) * v_.transpose();
 
   return wrap(res_);
 }
@@ -286,7 +290,8 @@ NumericVector update_u_B(NumericMatrix M, NumericMatrix C, NumericVector B, Nume
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
   const Map<VectorXd> B_(as<Map<VectorXd> >(B));
   const Map<VectorXd> v_(as<Map<VectorXd> >(v));
-  MatrixXd T_ = C_*B_;
+
+  MatrixXd T_ = C_*B_.replicate(1,M_.cols());
 
   VectorXd res(M_.rows(),1);
   for (int i = 0; i<M_.rows(); i++){
@@ -341,7 +346,7 @@ NumericVector update_v_B(NumericMatrix M, NumericMatrix C, NumericVector B, Nume
   const Map<MatrixXd> C_(as<Map<MatrixXd> >(C));
   const Map<VectorXd> B_(as<Map<VectorXd> >(B));
   const Map<VectorXd> u_(as<Map<VectorXd> >(u));
-  MatrixXd T_ = C_*B_;
+  MatrixXd T_ = C_*B_.replicate(1,M_.cols());
 
   VectorXd res(M_.cols(),1);
   for (int i = 0; i<M_.cols(); i++)
@@ -394,7 +399,7 @@ NumericVector update_B_B(NumericMatrix M, NumericMatrix C, NumericVector B, Nume
   const Map<VectorXd> B_(as<Map<VectorXd> >(B));
   const Map<VectorXd> u_(as<Map<VectorXd> >(u));
   const Map<VectorXd> v_(as<Map<VectorXd> >(v));
-  MatrixXd T_ = C_*B_;
+  MatrixXd T_ = C_*B_.replicate(1,M_.cols());
 
   VectorXd res(M_.cols(),1);
   for (int i = 0; i<M_.cols(); i++)
@@ -412,6 +417,7 @@ NumericVector update_B_B(NumericMatrix M, NumericMatrix C, NumericVector B, Nume
   }
   return wrap(res);
 }
+
 List initialize_uv(NumericMatrix M, NumericMatrix mask, NumericMatrix W, bool to_estimate_u, bool to_estimate_v, int niter = 1000, double rel_tol = 1e-5){
 
   // This function solves finds the optimal u and v assuming that L is zero. This would be later
@@ -1092,7 +1098,7 @@ List NNM_CV_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatri
   NumericVector lambda_Bs_n = lambda_Bs[lambda_Bs >= lambda_Bs(min_B_index)];
   List final_config = NNM_B_opt_path(M, C, mask, W, to_estimate_u, to_estimate_v, lambda_Ls_n, lambda_Bs_n, niter, rel_tol, 1);
   List z = final_config[min_L_index+min_B_index-1];
-  MatrixXd B_fin = z["B"];
+  VectorXd B_fin = z["B"];
   MatrixXd L_fin = z["L"];
   VectorXd u_fin = z["u"];
   VectorXd v_fin = z["v"];
@@ -1153,9 +1159,9 @@ List normalize(NumericMatrix mat){
                       Named("col_norms") = col_norms);
 }
 
-NumericMatrix normalize_back_cols(NumericVector B, NumericVector col_B_scales){
+NumericVector normalize_back_cols(NumericVector B, NumericVector col_B_scales){
   const Map<VectorXd> B_(as<Map<VectorXd> >(B));
-  MatrixXd B_new = B_;
+  VectorXd B_new = B_;
   if(col_B_scales.size()){
     for (int i=0; i < col_B_scales.size(); i++){
       B_new.col(i) = B_new.col(i) / col_B_scales(i);

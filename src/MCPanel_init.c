@@ -22,9 +22,9 @@ static const R_CallMethodDef CallEntries[] = {
     {"_MCPanel_mcnnm_cv",           (DL_FUNC) &_MCPanel_mcnnm_cv,           11},
     {"_MCPanel_mcnnm_fit",          (DL_FUNC) &_MCPanel_mcnnm_fit,           9},
     {"_MCPanel_mcnnm_lam_range",    (DL_FUNC) &_MCPanel_mcnnm_lam_range,     7},
-    {"_MCPanel_mcnnm_wc",           (DL_FUNC) &_MCPanel_mcnnm_wc,           12},
+    {"_MCPanel_mcnnm_wc",           (DL_FUNC) &_MCPanel_mcnnm_wc,           14},
     {"_MCPanel_mcnnm_wc_cv",        (DL_FUNC) &_MCPanel_mcnnm_wc_cv,        14},
-    {"_MCPanel_mcnnm_wc_fit",       (DL_FUNC) &_MCPanel_mcnnm_wc_fit,       16},
+    {"_MCPanel_mcnnm_wc_fit",       (DL_FUNC) &_MCPanel_mcnnm_wc_fit,       12},
     {"_MCPanel_mcnnm_wc_lam_range", (DL_FUNC) &_MCPanel_mcnnm_wc_lam_range, 9},
     {NULL, NULL, 0}
 };
