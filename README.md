@@ -48,13 +48,13 @@ weights[-c(4,5),] <- 1/(1-W[-c(4,5),]) # control group
 # Model without covariates
 
 est_model_MCPanel <- mcnnm_cv(M = Y_obs, mask = treat_mat, W = weights, 
-	to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 5, niter = 500, rel_tol = 1e-03, cv_ratio = 0.8, num_folds = 2, is_quiet = 1)
+	to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 10, niter = 1000, rel_tol = 1e-05, cv_ratio = 0.8, num_folds = 2, is_quiet = 0)
 
 est_model_MCPanel$Mhat <- est_model_MCPanel$L + replicate(T,est_model_MCPanel$u) + t(replicate(N,est_model_MCPanel$v))
 
 # Model with covariates
 est_model_MCPanel_w <- mcnnm_wc_cv(M = Y_obs, C = X, mask = treat_mat, W = weights, 
-	to_normalize = 1, to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 2, num_lam_B = 2, niter = 100, rel_tol = 1e-03, cv_ratio = 0.8, num_folds = 2, is_quiet = 0)
+	to_normalize = 1, to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 10, num_lam_B = 10, niter = 1000, rel_tol = 1e-05, cv_ratio = 0.8, num_folds = 2, is_quiet = 0)
 
-est_model_MCPanel_w$Mhat <- est_model_MCPanel_w$L + replicate(T,as.vector(X%*%est_model_MCPanel_w$B)) + replicate(T,est_model_MCPanel_w$u) + t(replicate(N,est_model_MCPanel_w$v))
+est_model_MCPanel_w$Mhat <- est_model_MCPanel_w$L + X%*%replicate(T,as.vector(est_model_MCPanel_w$B)) + replicate(T,est_model_MCPanel_w$u) + t(replicate(N,est_model_MCPanel_w$v))
 ```

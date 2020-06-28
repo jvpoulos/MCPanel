@@ -1159,12 +1159,12 @@ List normalize(NumericMatrix mat){
                       Named("col_norms") = col_norms);
 }
 
-NumericVector normalize_back_cols(NumericVector B, NumericVector col_B_scales){
+NumericVector normalize_back_cols(NumericVector B, NumericVector col_C_scales){
   const Map<VectorXd> B_(as<Map<VectorXd> >(B));
   VectorXd B_new = B_;
-  if(col_B_scales.size()){
-    for (int i=0; i < col_B_scales.size(); i++){
-      B_new.col(i) = B_new.col(i) / col_B_scales(i);
+  if(col_C_scales.size()){
+    for (int i=0; i < col_C_scales.size(); i++){
+      B_new(i) = B_new(i) / col_C_scales(i);
     }
   }
   return wrap(B_new);
