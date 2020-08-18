@@ -45,7 +45,7 @@ est_weights <- mcnnm_cv(M = treat_mat, mask = matrix(1, nrow(treat_mat), ncol(tr
 
 W <- est_weights$L
 
-weights <- W/(1-W)
+weights <- (1-treat_mat) + (treat_mat)*W/(1-W) # weighting by the odds
 
 # Model without covariates
 
