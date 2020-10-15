@@ -41,9 +41,9 @@ Y_obs <- Y * treat_mat
 # Estimate weights by matrix completion
 
 est_weights <- mcnnm_cv(M = treat_mat, mask = matrix(1, nrow(treat_mat), ncol(treat_mat)), W = matrix(0.5, nrow(treat_mat), ncol(treat_mat)), 
-	to_estimate_u = 0, to_estimate_v = 0, num_lam_L = 10, niter = 1000, rel_tol = 1e-05, cv_ratio = 0.8, num_folds = 2, is_quiet = 0)
+	to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 10, niter = 1000, rel_tol = 1e-05, cv_ratio = 0.8, num_folds = 2, is_quiet = 0)
 
-W <- est_weights$L
+W <- est_weights$L + replicate(T,est_weights$u) + t(replicate(N,est_weights$v))
 
 weights <- (1-treat_mat) + (treat_mat)*W/(1-W) # weighting by the odds
 

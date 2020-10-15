@@ -25,7 +25,7 @@ en_predict <- function(M, mask, best_lam, best_alpha){
 #' Computing Elastic Net Estimator when multiple units are missing.
 #' The underlying algorithm is glmnet package in R.
 #' It is worth noting that this package was written by Friedman et. al.
-#' 
+#'
 #' @param M Matrix of observed entries. The input should be N (number of units) by T (number of time periods).
 #' @param mask Binary mask with the same shape as M containing observed entries.
 #' @param num_folds Optional parameter on the number of folds for cross-validation. Default is 5.
@@ -63,7 +63,7 @@ en_cv_single_row <- function(M, mask, num_folds = 5, num_alpha = 40L){
   else{
     alpha <- seq(1e-4,1, length.out = num_alpha)
   }
-  
+
   M <- M * mask
   treated_row <- which(rowMeans(mask) < 1)
   treated_cols <- which(mask[treated_row,] ==0 )
@@ -93,7 +93,7 @@ en_cv_single_row <- function(M, mask, num_folds = 5, num_alpha = 40L){
     }
     Z_train <- M_new[1:(nrow(M_new)-1),control_cols];
     for (j in 1:num_alpha){
-      A=cv.glmnet(t(Z_train), M_new[nrow(M_new),control_cols], family = 'gaussian', alpha = alpha[j], thresh=1e-4, foldid=fold_id);
+      A=cv.glmnet(t(Z_train), M_new[nrow(M_new),control_cols], family = 'gaussian', alpha = alpha[j], thresh=1e-4, standardize = TRUE, foldid=fold_id);
       MSE[j]=min(A$cvm)
       lambda_opt[j]=A$lambda.min
     }

@@ -104,12 +104,10 @@ double Compute_objval(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Nume
   NumericMatrix est_mat = ComputeMatrix(L,u,v);
   const Map<MatrixXd> est_mat_(as<Map<MatrixXd> >(est_mat));
 
-  MatrixXd err_mat_ = est_mat_ - M_;
+  MatrixXd err_mat_ = W_*(est_mat_ - M_);
   MatrixXd err_mask_ = (err_mat_.array()) * mask_.array();
 
-  MatrixXd w_mask_ = (W_.array()) * mask_.array();
-
-  double obj_val = (double(1)/train_size) * (w_mask_.cwiseProduct(err_mask_.cwiseProduct(err_mask_))).sum() + lambda_L * sum_sing_vals;
+  double obj_val = (double(1)/train_size) * (err_mask_.cwiseProduct(err_mask_)).sum() + lambda_L * sum_sing_vals;
   return obj_val;
 }
 
@@ -131,44 +129,44 @@ double Compute_objval_B(NumericMatrix M, NumericMatrix C, NumericVector B, Numer
   NumericMatrix est_mat = ComputeMatrix_B(L, C, B, u, v);
   const Map<MatrixXd> est_mat_(as<Map<MatrixXd> >(est_mat));
 
-  MatrixXd err_mat_ = est_mat_ - M_;
+  MatrixXd err_mat_ = W_*(est_mat_ - M_);
   MatrixXd err_mask_ = (err_mat_.array()) * mask_.array();
 
-  MatrixXd w_mask_ = (W_.array()) * mask_.array();
-
-  double obj_val = (double(1)/train_size) * (w_mask_.cwiseProduct(err_mask_.cwiseProduct(err_mask_))).sum() + lambda_L * sum_sing_vals + lambda_B*norm_B;
+  double obj_val = (double(1)/train_size) * (err_mask_.cwiseProduct(err_mask_)).sum() + lambda_L * sum_sing_vals + lambda_B*norm_B;
   return obj_val;
 }
 
-double Compute_RMSE(NumericMatrix M, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v){
+double Compute_RMSE(NumericMatrix M, NumericMatrix mask, NumericMatrix L, NumericMatrix W, NumericVector u, NumericVector v){
 
   // This function computes Root Mean Squared Error of computed decomposition L,u,v.
 
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
+  const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
   double res = 0;
   int valid_size = mask_.sum();
   NumericMatrix est_mat = ComputeMatrix(L,u,v);
   const Map<MatrixXd> est_mat_(as<Map<MatrixXd> >(est_mat));
-  MatrixXd err_mat_ = est_mat_ - M_;
+  MatrixXd err_mat_ = W_*(est_mat_ - M_);
   MatrixXd err_mask_ = err_mat_.array() * mask_.array();
   res = std::sqrt((double(1.0)/valid_size) * (err_mask_.cwiseProduct(err_mask_)).sum());
   return res;
 }
 
-double Compute_RMSE_B(NumericMatrix M, NumericMatrix C, NumericVector B, NumericMatrix mask, NumericMatrix L, NumericVector u, NumericVector v){
+double Compute_RMSE_B(NumericMatrix M, NumericMatrix C, NumericVector B, NumericMatrix mask, NumericMatrix L, NumericMatrix W, NumericVector u, NumericVector v){
 
   // This function computes Root Mean Squared Error of computed decomposition L, B, u, v.
 
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
+  const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
   double res = 0;
   int valid_size = mask_.sum();
   NumericMatrix est_mat = ComputeMatrix_B(L, C, B, u, v);
   const Map<MatrixXd> est_mat_(as<Map<MatrixXd> >(est_mat));
-  MatrixXd err_mat_ = est_mat_ - M_;
+  MatrixXd err_mat_ = W_*(est_mat_ - M_);
   MatrixXd err_mask_ = err_mat_.array() * mask_.array();
   res = std::sqrt((double(1.0)/valid_size) * (err_mask_.cwiseProduct(err_mask_)).sum());
   return res;
@@ -990,7 +988,7 @@ List NNM_CV(NumericMatrix M, NumericMatrix mask, NumericMatrix W, bool to_estima
       NumericMatrix L_use = this_config["L"];
       NumericVector u_use = this_config["u"];
       NumericVector v_use = this_config["v"];
-      MSE(i,k) = std::pow(Compute_RMSE(M, mask_validation, L_use, u_use, v_use) ,2);
+      MSE(i,k) = std::pow(Compute_RMSE(M, mask_validation, L_use, W, u_use, v_use) ,2);
     }
   }
   VectorXd Avg_MSE = MSE.rowwise().mean();
@@ -1079,7 +1077,7 @@ List NNM_CV_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatri
         NumericVector u_use = this_config["u"];
         NumericVector v_use = this_config["v"];
         NumericVector B_use = this_config["B"];
-        MSE(i,j) += std::pow(Compute_RMSE_B(M, C, B_use, mask_validation, L_use, u_use, v_use) ,2);
+        MSE(i,j) += std::pow(Compute_RMSE_B(M, C, B_use, mask_validation, L_use, W, u_use, v_use) ,2);
       }  
     }
   }

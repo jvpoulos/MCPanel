@@ -3,11 +3,11 @@
 #' This algorithm is also known as exponentiated gradient descent.
 #' It is worth noting that this estimator was proposed by Abadie et. al and
 #' the reason of new implementation here is to compare methods on some datasets.
-#' 
+#'
 #' @param M Matrix of observed entries. The input should be N (number of units) by T (number of time periods).
 #' @param mask Binary mask with the same shape as M containing observed entries.
 #' @param niter Optional parameter on the number of iterations taken in the algorithm. The default value is 10000 and if the number of treated units are large for speed consideration will be reduced to 200.
-#' @param rel_tol Optional parameter on the stopping rule. Once the relative improve in objective value drops below rel_tol, execution is halted. Default value is 1e-8. 
+#' @param rel_tol Optional parameter on the stopping rule. Once the relative improve in objective value drops below rel_tol, execution is halted. Default value is 1e-8.
 #' @return The matrix with all missing entries filled.
 #' @seealso The R package called \code{\link[Synth]{synth}}, written by Alberto Abadie, Alexis Diamond, and Jens Hainmueller.
 #' @examples
@@ -54,6 +54,7 @@ my_synth <- function(A, b, niter, rel_tol){
   for (t in 1:niter){
     step_size = alpha
     grad = 2*(J %*% w - g)
+    grad <- pmax( -5, pmin( grad, 5)) # clip gradients
     w_np <- mirror_dec(w,step_size,grad)
     obj_val_n <- t(w_np) %*% J %*% w_np - 2* t(w_np) %*% g + t(b) %*% b
     rel_imp = (obj_val-obj_val_n)/obj_val
