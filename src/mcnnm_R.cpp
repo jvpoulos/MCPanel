@@ -143,7 +143,6 @@ double Compute_RMSE(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Numeri
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
-  const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
   double res = 0;
   int valid_size = mask_.sum();
   NumericMatrix est_mat = ComputeMatrix(L,u,v);
@@ -161,7 +160,6 @@ double Compute_RMSE_B(NumericMatrix M, NumericMatrix C, NumericVector B, Numeric
   using Eigen::Map;
   const Map<MatrixXd> M_(as<Map<MatrixXd> >(M));
   const Map<MatrixXd> mask_(as<Map<MatrixXd> >(mask));
-  const Map<MatrixXd> W_(as<Map<MatrixXd> >(W));
   double res = 0;
   int valid_size = mask_.sum();
   NumericMatrix est_mat = ComputeMatrix_B(L, C, B, u, v);
