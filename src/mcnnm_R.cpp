@@ -994,7 +994,7 @@ List NNM_CV(NumericMatrix M, NumericMatrix mask, NumericMatrix W, bool to_estima
       NumericMatrix L_use = this_config["L"];
       NumericVector u_use = this_config["u"];
       NumericVector v_use = this_config["v"];
-      MSE(i,k) = std::pow(Compute_RMSE(M, mask_validation, L_use, u_use, v_use) ,2);
+      MSE(i,k) = std::pow(Compute_RMSE(M, mask_validation, L_use, W, u_use, v_use) ,2);
     }
   }
   VectorXd Avg_MSE = MSE.rowwise().mean();
@@ -1083,7 +1083,7 @@ List NNM_CV_B(NumericMatrix M, NumericMatrix C, NumericMatrix mask, NumericMatri
         NumericVector u_use = this_config["u"];
         NumericVector v_use = this_config["v"];
         NumericVector B_use = this_config["B"];
-        MSE(i,j) += std::pow(Compute_RMSE_B(M, C, B_use, mask_validation, L_use, u_use, v_use) ,2);
+        MSE(i,j) += std::pow(Compute_RMSE_B(M, C, B_use, mask_validation, L_use, W, u_use, v_use) ,2);
       }  
     }
   }
