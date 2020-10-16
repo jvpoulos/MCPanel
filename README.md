@@ -34,36 +34,30 @@ Y <- replicate(T,rnorm(N)) # simulated observed outcomes
 
 X <- replicate(T,rnorm(N)) # simulated covariates
 
-treat_mat <- stag_adapt(M = Y, N_t = (N/2+1), T0= T/2, treat_indices=seq(N/2, N, 1)) # staggered adoption
+treat_mat <- stag_adapt(M = Y, N_t = (N/2+1), T0= T/2, treat_indices=seq(N/2, N, 1)) # 0s are treated
 
 Y_obs <- Y * treat_mat
 
 # Estimate weights by matrix completion
 
-est_weights <- mcnnm_cv(M = treat_mat, mask = matrix(1, nrow(treat_mat), ncol(treat_mat)), W = matrix(0.5, nrow(treat_mat), ncol(treat_mat)), 
-	to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 10, niter = 1000, rel_tol = 1e-05, cv_ratio = 0.8, num_folds = 2, is_quiet = 0)
+est_weights <- mcnnm_wc_cv(M = treat_mat, C=X, mask = matrix(1, nrow(treat_mat), ncol(treat_mat)), W = matrix(1, nrow(treat_mat), ncol(treat_mat)), 
+	to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 5, num_lam_B = 5, niter = 100, rel_tol = 1e-05, cv_ratio = 0.8, num_folds = 2, is_quiet = 0) # no missing values
 
-W <- est_weights$L + replicate(T,est_weights$u) + t(replicate(N,est_weights$v))
+W <- est_weights$L + X%*%replicate(T,as.vector(est_weights$B)) + replicate(T,est_weights$u) + t(replicate(N,est_weights$v))
 
-weights <- (1-treat_mat) + (treat_mat)*W/(1-W) # weighting by the odds
+W[W<=0] <- min(W[W>0]) # set floor
+W[W>=1] <- max(W[W<1]) # set ceiling
 
-# Model without covariates
-
-est_model_MCPanel <- mcnnm_cv(M = Y_obs, mask = treat_mat, W = weights, 
-	to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 10, niter = 1000, rel_tol = 1e-05, cv_ratio = 0.8, num_folds = 2, is_quiet = 0)
-
-est_model_MCPanel$Mhat <- est_model_MCPanel$L + replicate(T,est_model_MCPanel$u) + t(replicate(N,est_model_MCPanel$v))
-
-est_model_MCPanel$msk_err <- (est_model_MCPanel$Mhat - Y)*(1-treat_mat)
-est_model_MCPanel$test_RMSE <- sqrt((1/sum(1-treat_mat)) * sum(est_model_MCPanel$msk_err^2, na.rm = TRUE))
-est_model_MCPanel$test_RMSE
+weights <- (1-treat_mat) + (treat_mat)*W/(1-W) # weight adjustment (treated are 0)
 
 # Model with covariates
-est_model_MCPanel_w <- mcnnm_wc_cv(M = Y_obs, C = X, mask = treat_mat, W = weights, 
-	to_normalize = 1, to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 10, num_lam_B = 5, niter = 1000, rel_tol = 1e-05, cv_ratio = 0.8, num_folds = 2, is_quiet = 0)
+est_model_MCPanel_w <- mcnnm_wc_cv(M = Y_obs, C = X, mask = treat_mat, W = 
+	, 
+	to_normalize = 1, to_estimate_u = 1, to_estimate_v = 1, num_lam_L = 5, num_lam_B = 5, niter = 100, rel_tol = 1e-05, cv_ratio = 0.8, num_folds = 2, is_quiet = 0)
 
 est_model_MCPanel_w$Mhat <- est_model_MCPanel_w$L + X%*%replicate(T,as.vector(est_model_MCPanel_w$B)) + replicate(T,est_model_MCPanel_w$u) + t(replicate(N,est_model_MCPanel_w$v))
-est_model_MCPanel_w$msk_err <- (est_model_MCPanel_w$Mhat - Y)*(1-treat_mat)
-est_model_MCPanel_w$test_RMSE <- sqrt((1/sum(1-treat_mat)) * sum(est_model_MCPanel_w$msk_err^2, na.rm = TRUE))
-est_model_MCPanel_w$test_RMSE
+est_model_MCPanel_w$msk_err <- (Y-est_model_MCPanel_w$Mhat)*(1-treat_mat)
+est_model_MCPanel_w$att<- (1/sum(1-treat_mat)) * sum(est_model_MCPanel_w$msk_err)
+est_model_MCPanel_w$att
+
 ```
