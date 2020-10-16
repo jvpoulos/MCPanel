@@ -104,10 +104,10 @@ double Compute_objval(NumericMatrix M, NumericMatrix mask, NumericMatrix L, Nume
   NumericMatrix est_mat = ComputeMatrix(L,u,v);
   const Map<MatrixXd> est_mat_(as<Map<MatrixXd> >(est_mat));
 
-  MatrixXd err_mat_ = W_*(est_mat_ - M_);
+  MatrixXd err_mat_ = est_mat_ - M_;
   MatrixXd err_mask_ = (err_mat_.array()) * mask_.array();
 
-  double obj_val = (double(1)/train_size) * (err_mask_.cwiseProduct(err_mask_)).sum() + lambda_L * sum_sing_vals;
+  double obj_val = (double(1)/train_size) * (W_.cwiseProduct(err_mask_.cwiseProduct(err_mask_))).sum() + lambda_L * sum_sing_vals;
   return obj_val;
 }
 
@@ -129,10 +129,10 @@ double Compute_objval_B(NumericMatrix M, NumericMatrix C, NumericVector B, Numer
   NumericMatrix est_mat = ComputeMatrix_B(L, C, B, u, v);
   const Map<MatrixXd> est_mat_(as<Map<MatrixXd> >(est_mat));
 
-  MatrixXd err_mat_ = W_*(est_mat_ - M_);
+  MatrixXd err_mat_ = est_mat_ - M_;
   MatrixXd err_mask_ = (err_mat_.array()) * mask_.array();
 
-  double obj_val = (double(1)/train_size) * (err_mask_.cwiseProduct(err_mask_)).sum() + lambda_L * sum_sing_vals + lambda_B*norm_B;
+  double obj_val = (double(1)/train_size) * (W_.cwiseProduct(err_mask_.cwiseProduct(err_mask_))).sum() + lambda_L * sum_sing_vals + lambda_B*norm_B;
   return obj_val;
 }
 
@@ -720,7 +720,7 @@ List NNM_fit_B(NumericMatrix M, NumericMatrix C, NumericVector B_init, NumericMa
     obj_val = new_obj_val;
   }
   if(is_quiet == 0){
-    std::cout << "Terminated at iteration : " << term_iter << ", for lambda_L :" << lambda_L << ", with obj_val :" << new_obj_val << std::endl;
+    std::cout << "Terminated at iteration : " << term_iter << ", for lambda_L :" << lambda_L << ", for lambda_B :" << lambda_B << ", with obj_val :" << new_obj_val << std::endl;
   }
   return List::create(Named("B") = B,
                       Named("L") = L,
